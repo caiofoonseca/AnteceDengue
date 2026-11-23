@@ -8,7 +8,7 @@ import pandas as pd
 from src import config
 from src.panel import add_reference_date, week_start
 
-TAIL_MARGIN = 0.05  # tolerância acima da fração de referência (5 pontos percentuais)
+TAIL_MARGIN = 0.05
 
 
 def pending_by_week(df: pd.DataFrame) -> pd.DataFrame:
@@ -42,7 +42,6 @@ def choose_panel_end(weekly: pd.DataFrame, ref_start: str, ref_end: str,
     limite = ref + margin
     acima = w["frac_pendente"] > limite
     depois = w["week_start"] > pd.Timestamp(ref_end)
-    # última semana abaixo do limite (após o período de referência)
     abaixo_depois = w[~acima & depois]
     ultima_ok = abaixo_depois["week_start"].max() if len(abaixo_depois) else pd.Timestamp(ref_end)
     return ultima_ok, float(ref), float(limite)

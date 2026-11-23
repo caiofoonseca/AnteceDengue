@@ -8,15 +8,15 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.pyplot as plt
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import config  # noqa: E402
-from src import data_recife as dr  # noqa: E402
-from src.tail import TAIL_MARGIN, choose_panel_end, pending_by_week  # noqa: E402
+from src import config
+from src import data_recife as dr
+from src.tail import TAIL_MARGIN, choose_panel_end, pending_by_week
 
-REF_START, REF_END = "2025-01-05", "2025-06-29"  # 26 semanas "estáveis" de referência
+REF_START, REF_END = "2025-01-05", "2025-06-29"
 N_SEMANAS = 32
 
 AZUL, CINZA, LARANJA = "#2b6cb0", "#6b7280", "#c2410c"

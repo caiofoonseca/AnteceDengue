@@ -8,12 +8,12 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.pyplot as plt
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import config  # noqa: E402
-from src import data_clima as dc  # noqa: E402
+from src import config
+from src import data_clima as dc
 
 AZUL, LARANJA = "#2b6cb0", "#c2410c"
 
@@ -63,7 +63,6 @@ def main() -> None:
     weekly = dc.build_all(download=download)
     chuva_om = dc.weekly_rain_daily(dc.read_openmeteo_daily())
 
-    # semanas do painel (2015-01-04 até PANEL_END)
     semanas = pd.date_range("2015-01-04", pd.Timestamp(config.PANEL_END), freq="7D")
     na_painel = weekly[weekly["week_start"].isin(semanas)]
     faltam_linha = sorted(set(semanas) - set(weekly["week_start"]))
@@ -78,7 +77,6 @@ def main() -> None:
     est.columns = ["coluna", "média", "desvio", "mín", "mediana", "máx"]
     valid_txt, _ = validar_com_inmet(chuva_om)
 
-    # gráfico: temperatura e chuva (dois painéis, sem eixo duplo)
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(10, 5.8), sharex=True)
     a1.plot(weekly["week_start"], weekly["temp_media"], color=LARANJA, lw=1)
     a1.set_ylabel("temperatura média (°C)")

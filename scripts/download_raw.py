@@ -10,7 +10,7 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import config  # noqa: E402
+from src import config
 
 API = "https://dados.recife.pe.gov.br/api/3/action/package_show"
 DATASET = "casos-de-dengue-zika-e-chikungunya"

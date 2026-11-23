@@ -2,7 +2,6 @@
 import os
 from pathlib import Path
 
-# Caminhos (relativos à raiz do repositório)
 ROOT = Path(__file__).resolve().parent.parent
 DATA_RAW = ROOT / "data" / "raw"
 DATA_PROCESSED = ROOT / "data" / "processed"
@@ -11,36 +10,35 @@ REPORTS_DIR = ROOT / "reports"
 
 SEED = 42
 
-# Dados de casos (ver CLAUDE.md, "Decisões de dados")
-CASE_CODES = (1, 2, 3, 4, 10, 11, 12)  # classificação final = caso confirmado
+CASE_CODES = (1, 2, 3, 4, 10, 11, 12)
 PANEL_START_YEAR = 2015
 PANEL_END_YEAR = 2025
-# Última semana (domingo) confiável: depois dela a fração de casos ainda sem classificação
-# definitiva dispara (ver reports/cauda_2025.md).
 PANEL_END = "2025-08-17"
-BAIRRO_FUZZY_CUTOFF = 0.90  # similaridade mínima na correspondência aproximada de bairros
+BAIRRO_FUZZY_CUTOFF = 0.90
 
-# Rótulos de risco
 CLASSES = ["baixo", "medio", "alto"]
 Q_MID = 0.60
 Q_HIGH = 0.85
 
-# Validação temporal
+CASE_LAGS = (1, 2, 3)
+ROLLING_WINDOWS = (4, 8)
+CLIMATE_LAGS = (1, 2, 4, 8)
+RAIN_WINDOWS = (2, 4, 8)
+CLIMATE_FFILL_LIMIT = 2
+MAX_HISTORY_WEEKS = 8
+
 TEST_WEEKS = 26
 VAL_WEEKS = 26
 GAP_WEEKS = 1
 CV_SPLITS = 5
 
-# MLflow
 EXP_BASELINE = "01-baseline"
 EXP_COMPARE = "02-comparacao-modelos"
 EXP_TUNING = "03-otimizacao-hiperparametros"
 MLFLOW_MODEL_NAME = "antecedengue-risk-classifier"
 
-# MQTT
 MQTT_TOPIC = "antecedengue/estacoes/+/leituras"
 
-# Dependem do ambiente (padrão para desenvolvimento local)
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://antecedengue:antecedengue@localhost:5432/antecedengue"
 )

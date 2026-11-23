@@ -12,7 +12,6 @@ from src.data_recife import read_csv_tolerant
 
 TABELA_BAIRROS = config.DATA_RAW / "auxiliares" / "tabela_de_bairros.csv"
 
-# Motivos de descarte / métodos de resolução
 EXATO, ALIAS, APROXIMADO = "exato", "apelido", "aproximado"
 NULO, NAO_BAIRRO, NAO_ENCONTRADO = "nulo", "não é bairro", "não encontrado na tabela"
 
@@ -24,7 +23,7 @@ def normalize_name(s) -> str | None:
     s = unicodedata.normalize("NFKD", str(s))
     s = "".join(c for c in s if not unicodedata.combining(c)).upper()
     s = re.sub(r"[.\-/_]", " ", s)
-    s = re.sub(r"[^A-Z0-9 ]", "", s)  # remove também caracteres corrompidos
+    s = re.sub(r"[^A-Z0-9 ]", "", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s or None
 
@@ -60,6 +59,6 @@ def resolve_bairro(raw, official: list[str], cutoff: float | None = None) -> tup
             return cands[0], APROXIMADO
         r1 = difflib.SequenceMatcher(None, nome, cands[0]).ratio()
         r2 = difflib.SequenceMatcher(None, nome, cands[1]).ratio()
-        if r1 - r2 >= 0.03:  # evita escolher entre dois nomes parecidos
+        if r1 - r2 >= 0.03:
             return cands[0], APROXIMADO
     return None, NAO_ENCONTRADO

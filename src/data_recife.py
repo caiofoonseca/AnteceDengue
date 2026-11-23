@@ -11,7 +11,7 @@ import pandas as pd
 
 from src import config
 
-ENCODINGS = ("utf-8-sig", "latin-1")  # latin-1 aceita qualquer byte, por isso vem por último
+ENCODINGS = ("utf-8-sig", "latin-1")
 SEPARATORS = (";", ",")
 
 
@@ -80,7 +80,6 @@ def load_all(raw_dir: Path | None = None) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-# Esquema único: nome padronizado -> candidatos de coluna (minúsculas) nos arquivos de cada ano
 COLUMN_MAP = {
     "nu_notificacao": ["nu_notificacao", "nu_notific"],
     "dt_notificacao": ["dt_notificacao", "dt_notific"],

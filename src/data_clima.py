@@ -29,19 +29,18 @@ GEOCODE = 2611606
 INFODENGUE_URL = "https://info.dengue.mat.br/api/alertcity"
 
 OPENMETEO_URL = "https://archive-api.open-meteo.com/v1/archive"
-RECIFE_LAT, RECIFE_LON = -8.05, -34.9  # centro aproximado do município
+RECIFE_LAT, RECIFE_LON = -8.05, -34.9
 OPENMETEO_MODEL = "era5"
 TZ_LOCAL = "America/Recife"
 
 INMET_ZIP_URL = "https://portal.inmet.gov.br/uploads/dadoshistoricos/{year}.zip"
-INMET_STATION = "A301"  # RECIFE (automática)
-UA = {"User-Agent": "Mozilla/5.0"}  # o portal do INMET derruba conexões sem User-Agent
-MIN_HORAS_CHUVA = 0.8 * 168  # semana com menos de 80% das horas medidas não tem soma confiável
+INMET_STATION = "A301"
+UA = {"User-Agent": "Mozilla/5.0"}
+MIN_HORAS_CHUVA = 0.8 * 168
 
 COLUNAS_SAIDA = ["week_start", "temp_media", "temp_min", "temp_max", "umid_media", "chuva_mm"]
 
 
-# ---------------------------------------------------------------- download
 def download_infodengue(start_year: int = config.PANEL_START_YEAR, end_year: int = config.PANEL_END_YEAR) -> Path:
     params = {"geocode": GEOCODE, "disease": "dengue", "format": "csv",
               "ew_start": 1, "ew_end": 53, "ey_start": start_year, "ey_end": end_year}
@@ -84,7 +83,6 @@ def download_inmet_year(year: int, force: bool = False) -> Path | None:
     return destino
 
 
-# ---------------------------------------------------------------- leitura
 def read_infodengue(path: Path | None = None) -> pd.DataFrame:
     """Temperatura e umidade semanais do InfoDengue, com week_start = data_iniSE (domingo)."""
     df = pd.read_csv(path or CLIMA_RAW / f"infodengue_alertcity_{GEOCODE}.csv", parse_dates=["data_iniSE"])
@@ -127,12 +125,11 @@ def read_inmet_hourly(path: Path) -> pd.DataFrame:
     hora = pd.to_numeric(df[c_hora].str.extract(r"(\d{2})")[0], errors="coerce")
     utc = (data + pd.to_timedelta(hora, unit="h")).dt.tz_localize("UTC")
     chuva = pd.to_numeric(df[c_chuva].str.replace(",", ".").str.strip(), errors="coerce")
-    chuva = chuva.where(chuva > -999)  # -9999 = sem dado
+    chuva = chuva.where(chuva > -999)
     out = pd.DataFrame({"datetime_local": utc.dt.tz_convert(TZ_LOCAL).dt.tz_localize(None), "chuva_mm": chuva})
     return out[out["datetime_local"].notna()].reset_index(drop=True)
 
 
-# ---------------------------------------------------------------- agregação
 def weekly_rain_daily(daily: pd.DataFrame) -> pd.DataFrame:
     """Soma semanal (domingo a sábado) da chuva diária. Colunas: week_start, chuva_mm, dias_chuva.
 

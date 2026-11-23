@@ -31,13 +31,12 @@ def test_le_inmet_com_metadados_virgula_e_menos_9999(tmp_path):
     h = dc.read_inmet_hourly(p)
     assert len(h) == 3
     assert h["chuva_mm"].iloc[0] == 1.5
-    assert pd.isna(h["chuva_mm"].iloc[1])  # -9999 vira nulo
-    # 02:00 UTC = 23:00 do dia anterior em Recife (UTC-3)
+    assert pd.isna(h["chuva_mm"].iloc[1])
     assert h["datetime_local"].iloc[0] == T("2024-12-30 23:00")
 
 
 def test_semana_comeca_no_domingo_e_soma_chuva():
-    h = horario("2025-01-05 00:00", 7 * 24, 0.5)  # domingo a sábado, 168 h x 0,5 mm
+    h = horario("2025-01-05 00:00", 7 * 24, 0.5)
     w = dc.weekly_rain(h)
     assert list(w["week_start"]) == [T("2025-01-05")]
     assert w["chuva_mm"].iloc[0] == 84.0
@@ -45,7 +44,6 @@ def test_semana_comeca_no_domingo_e_soma_chuva():
 
 
 def test_virada_de_ano_fica_na_mesma_semana():
-    # 29/12/2024 (domingo) a 04/01/2025 (sábado): uma semana só, mesmo cruzando o ano
     h = horario("2024-12-29 00:00", 7 * 24, 1.0)
     w = dc.weekly_rain(h)
     assert len(w) == 1
@@ -55,7 +53,7 @@ def test_virada_de_ano_fica_na_mesma_semana():
 
 def test_semana_com_pouca_cobertura_vira_nula():
     h = horario("2025-01-05 00:00", 7 * 24, 1.0)
-    h.loc[:60, "chuva_mm"] = float("nan")  # só 107 de 168 horas válidas (< 80%)
+    h.loc[:60, "chuva_mm"] = float("nan")
     w = dc.weekly_rain(h)
     assert pd.isna(w["chuva_mm"].iloc[0])
     assert w["horas_chuva"].iloc[0] == 107
@@ -66,17 +64,16 @@ def diario(inicio, dias, chuva):
 
 
 def test_chuva_diaria_soma_semanal_e_virada_de_ano():
-    # 29/12/2024 (domingo) a 04/01/2025 (sábado) = uma semana, mesmo cruzando o ano
     w = dc.weekly_rain_daily(diario("2024-12-29", 7, 2.0))
     assert list(w["week_start"]) == [T("2024-12-29")]
     assert w["chuva_mm"].iloc[0] == 14.0
 
 
 def test_chuva_diaria_semana_incompleta_vira_nula():
-    w = dc.weekly_rain_daily(diario("2025-01-01", 10, 1.0))  # quarta 01/01 a sexta 10/01
+    w = dc.weekly_rain_daily(diario("2025-01-01", 10, 1.0))
     assert list(w["week_start"]) == [T("2024-12-29"), T("2025-01-05")]
-    assert pd.isna(w["chuva_mm"].iloc[0])      # só 4 dias da semana de 29/12
-    assert pd.isna(w["chuva_mm"].iloc[1])      # só 6 dias da semana de 05/01
+    assert pd.isna(w["chuva_mm"].iloc[0])
+    assert pd.isna(w["chuva_mm"].iloc[1])
 
 
 def test_le_openmeteo_com_metadados(tmp_path):
@@ -94,4 +91,4 @@ def test_junta_clima_semanal_com_chuva():
     out = dc.build_weekly_climate(info, dc.weekly_rain_daily(diario("2025-01-05", 7, 12.0)))
     assert list(out["week_start"]) == [T("2025-01-05"), T("2025-01-12")]
     assert out["chuva_mm"].iloc[0] == 84.0
-    assert pd.isna(out["chuva_mm"].iloc[1])  # semana sem dados de chuva
+    assert pd.isna(out["chuva_mm"].iloc[1])

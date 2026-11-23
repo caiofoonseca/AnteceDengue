@@ -6,18 +6,16 @@ Foram levantadas olhando os nomes que não batiam com a tabela em 2015-2025.
 """
 
 ALIASES = {
-    # acento/caractere perdido na origem
     "GRAAS": "GRACAS",
     "TAMA": "TAMARINEIRA",
     "MORRO DA CONCEIO": "MORRO DA CONCEICAO",
     "MORRO DA CONCEIAO": "MORRO DA CONCEICAO",
     "SO JOSE": "SAO JOSE",
     "JORDO": "JORDAO",
-    "FUNDO": "FUNDAO",  # "FUNDÃO" com caractere corrompido
+    "FUNDO": "FUNDAO",
     "BOMBA DO HEMETRIO": "BOMBA DO HEMETERIO",
     "ALTO JOS DO PINHO": "ALTO JOSE DO PINHO",
     "CHO DE ESTRELA": "CHAO DE ESTRELA",
-    # erros de digitação
     "INBIRIBEIRA": "IMBIRIBEIRA",
     "VASIO DAGAMA": "VASCO DA GAMA",
     "MUSTADINHA": "MUSTARDINHA",
@@ -29,9 +27,8 @@ ALIASES = {
     "SANTE AMARO": "SANTO AMARO",
     "SANATO AMARO": "SANTO AMARO",
     "AREAIS": "AREIAS",
-    "MACAEIRA": "MACAXEIRA",  # "MACA\EIRA" com caractere corrompido
+    "MACAEIRA": "MACAXEIRA",
     "JIQU": "JIQUIA",
-    # variações de nome
     "JOANA BEZERRA": "ILHA JOANA BEZERRA",
     "MANGUEIRA BAIRRO": "MANGUEIRA",
     "JD JORDAO": "JORDAO",
@@ -41,5 +38,4 @@ ALIASES = {
     "VASC": "VASCO DA GAMA",
 }
 
-# Valores que aparecem no campo de bairro mas não são um bairro do Recife
 NOT_BAIRRO = {"ZONA RURAL", "CENTRO", "BAIRRO IGNORADO"}

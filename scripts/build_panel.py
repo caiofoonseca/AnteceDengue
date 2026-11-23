@@ -8,9 +8,9 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import config  # noqa: E402
-from src import data_recife as dr  # noqa: E402
-from src.panel import build_panel  # noqa: E402
+from src import config
+from src import data_recife as dr
+from src.panel import build_panel
 
 
 def md_table(df: pd.DataFrame) -> str:
@@ -76,8 +76,6 @@ def main() -> None:
     out += ["## 10 semanas com mais casos (soma da cidade)", "",
             md_table(por_semana.rename("casos").reset_index().assign(
                 week_start=lambda x: x["week_start"].dt.strftime("%Y-%m-%d"))), ""]
-    # Limiares de risco se fossem calculados em TODO o painel (só informativo: no treino real
-    # eles serão calculados apenas com a parte de treino)
     q_mid, q_high = (float(panel["casos"].quantile(q)) for q in (config.Q_MID, config.Q_HIGH))
     classe = pd.cut(panel["casos"], [-float("inf"), q_mid, q_high, float("inf")], labels=config.CLASSES)
     dist = classe.value_counts().reindex(config.CLASSES)

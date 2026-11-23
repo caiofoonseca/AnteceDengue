@@ -9,7 +9,7 @@
 - Problema: classificação. Prever a classe de risco da semana t+1 por bairro: 0 = baixo, 1 = médio, 2 = alto.
 - Rótulo: quantis 0.60 e 0.85 dos casos(t+1), calculados SÓ no treino.
 - Unidade de análise: bairro x semana epidemiológica (semana começa no domingo, coluna week_start).
-- Features: só informação do passado ou do presente (casos atuais, lags 1 a 3, médias móveis 4 e 8, tendência, média histórica expansiva por bairro, lags de clima 1/2/4/8, chuva acumulada 2/4/8, seno e cosseno da sazonalidade, features do sensor opcionais).
+- Features: só informação do passado ou do presente (casos atuais, lags 1 a 3, médias móveis 4 e 8, tendência, média histórica expansiva por bairro, lags de clima 1/2/4/8, chuva acumulada 2/4/8, seno e cosseno da sazonalidade). Features do sensor NÃO entram no treino (ver "Decisões de ML (passo 5)").
 - Validação: holdout cronológico (treino | validação 26 semanas | teste 26 semanas, com 1 semana de gap) e CV de janela expansiva com 5 splits. Proibido k-fold aleatório (vaza o futuro). O teste é usado uma única vez, no final.
 - Seleção de modelo: F1-macro na CV. Métricas reportadas: F1-macro, balanced accuracy, recall da classe alto e matriz de confusão. Referência: baseline ingênuo de persistência (risco da semana t repetido em t+1).
 - Modelos permitidos: LogisticRegression (baseline), KNN, DecisionTree, RandomForest, AdaBoost, MLP. Busca com RandomizedSearchCV usando a CV temporal. SVM e Gradient Boosting só com aprovação do professor.
@@ -27,6 +27,17 @@
 - Data de referência do caso: data de início dos sintomas. Se estiver nula ou absurda (anterior em mais de 1 ano ao ano do arquivo, ou posterior à data de notificação), usa-se a data de notificação. Registros sem nenhuma data válida são descartados e contados.
 - Cauda de 2025: casos recentes demoram a ser classificados (CLASSI_FIN nula ou 8), o que deixa as últimas semanas artificialmente baixas. PANEL_END = 2025-08-17 (config.py): última semana em que a fração de registros nulos/inconclusivos ainda fica dentro de referência (média jan–jun/2025 = 0,27%) + 5 pontos percentuais (limite 5,27%). O painel é cortado nessa semana. Ver reports/cauda_2025.md.
 
+## Decisões de ML (passo 5)
+- A chuva do treino é reanálise ERA5 (Open-Meteo), em escala diferente do pluviômetro do ESP32. Features do sensor NÃO entram no treino do modelo; o sensor só alimenta a demonstração ao vivo e o dashboard.
+- Nulos de temperatura e umidade: preencher só com valores do passado (forward fill causal, limite de 2 semanas) antes de calcular os lags. O que restar de nulo fica para um SimpleImputer dentro do Pipeline do scikit-learn, ajustado só no treino.
+- Classes desbalanceadas (~72/17/10): usar class_weight="balanced" quando o modelo suportar. Métrica de seleção: F1-macro; acompanhar também o recall da classe alto.
+- Regra dos rótulos: baixo = casos <= q_mid; médio = casos <= q_high; alto = acima. Limiares estritamente crescentes (src/labels.py), ajustados só nos alvos do treino de cada split.
+- Definições das features (src/features.py): linha t usa só semanas <= t; alvo = casos(t+1). Tendência = média móvel 4 - média móvel 8. Médias móveis e chuva acumulada incluem a semana t. Média histórica expansiva usa só semanas anteriores a t. Sazonalidade = seno/cosseno do dia do ano do meio da semana. As 8 primeiras semanas do painel são descartadas (histórico incompleto).
+- Validação: o alvo da linha t cai na semana t+1. Linha de um conjunto não pode ter alvo na semana de início do conjunto seguinte; GAP_WEEKS semanas de linhas são excluídas entre os conjuntos.
+
+## Registro de uso de IA
+- Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
+
 ## Stack obrigatória
 MLflow, Airflow (DAG semanal), MQTT com Mosquitto, Postgres, FastAPI, dashboard em Streamlit, tudo subindo com um único docker compose up. O modelo é salvo com joblib, e a versão do scikit-learn deve ser a mesma em todos os containers.
 
@@ -35,7 +46,8 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 
 ## Convenções
 - Python 3.11. SEED = 42. Constantes e caminhos centralizados em src/config.py.
-- Identificadores de código em inglês. Comentários, docs e mensagens para o usuário em português.
+- Identificadores de código em inglês. Docs, docstrings e mensagens para o usuário em português.
+- Não deixar comentários (`#`) no código, nem de linha nem inline. A explicação vai na docstring (curta) ou no nome claro das variáveis.
 - Testes com pytest. Todo passo termina com testes passando.
 - Commits pequenos, mensagem clara. Nunca commitar segredos nem dados brutos grandes (usar .env e .gitignore).
 - Não adicionar Co-Authored-By nem qualquer atribuição ao Claude nas mensagens de commit.

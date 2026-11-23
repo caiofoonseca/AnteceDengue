@@ -66,15 +66,12 @@ def build_panel(df: pd.DataFrame, official: list[str] | None = None) -> PanelRes
     funnel: list[tuple[str, int]] = [("Registros lidos (2013–2025)", len(df))]
     ex: dict = {}
 
-    # 1. período
     d = df[df["ano_arquivo"].between(config.PANEL_START_YEAR, config.PANEL_END_YEAR)]
     funnel.append((f"Após período {config.PANEL_START_YEAR}–{config.PANEL_END_YEAR}", len(d)))
 
-    # 2. caso confirmado
     d = d[d["classi_fin"].isin(config.CASE_CODES)]
     funnel.append(("Após caso confirmado", len(d)))
 
-    # 3. data válida
     d = add_reference_date(d)
     ex["fallback_notificacao"] = d["motivo_fallback"].value_counts().to_dict()
     sem_data = d["dt_ref"].isna()
@@ -82,7 +79,6 @@ def build_panel(df: pd.DataFrame, official: list[str] | None = None) -> PanelRes
     d = d[~sem_data]
     funnel.append(("Após data válida", len(d)))
 
-    # 4. bairro válido
     resolvido = {raw: resolve_bairro(raw, official) for raw in d["bairro_raw"].dropna().unique()}
 
     def _resolve(raw):
@@ -104,7 +100,6 @@ def build_panel(df: pd.DataFrame, official: list[str] | None = None) -> PanelRes
     d = d[~sem_bairro]
     funnel.append(("Após bairro válido", len(d)))
 
-    # 5. duplicatas
     exatas = d["dup_exata"].sum()
     d = d[~d["dup_exata"]]
     chave = ["nu_notificacao", "ano_arquivo", "bairro", "dt_sintomas", "dt_notificacao", "classi_fin"]
@@ -117,13 +112,12 @@ def build_panel(df: pd.DataFrame, official: list[str] | None = None) -> PanelRes
     ex["nu_repetido_mantido"] = int(mesma_nu.sum())
     funnel.append(("Após duplicatas", len(d)))
 
-    # 6. janela do painel
     d = d.assign(week_start=week_start(d["dt_ref"]))
     first = week_start(pd.Series([pd.Timestamp(f"{config.PANEL_START_YEAR}-01-01")])).iloc[0]
     if first < pd.Timestamp(f"{config.PANEL_START_YEAR}-01-01"):
-        first += pd.Timedelta(days=7)  # primeira semana inteira dentro do período
+        first += pd.Timedelta(days=7)
     last_dados = last_complete_week(df.loc[df["ano_arquivo"] <= config.PANEL_END_YEAR, "dt_notificacao"].max())
-    last = min(last_dados, pd.Timestamp(config.PANEL_END))  # corta a cauda ainda não classificada
+    last = min(last_dados, pd.Timestamp(config.PANEL_END))
     ex["ultima_semana_completa_dados"] = last_dados
     na_janela = d["week_start"].between(first, last)
     ex["fora_da_janela"] = int((~na_janela).sum())

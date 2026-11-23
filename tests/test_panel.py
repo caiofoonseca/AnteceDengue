@@ -10,24 +10,24 @@ T = pd.Timestamp
 def test_week_start_e_domingo():
     datas = pd.Series(pd.to_datetime(["2025-01-05", "2025-01-04", "2025-12-31", "2025-01-06"]))
     ws = week_start(datas)
-    assert ws.dt.weekday.eq(6).all()  # domingo
+    assert ws.dt.weekday.eq(6).all()
     assert list(ws) == [T("2025-01-05"), T("2024-12-29"), T("2025-12-28"), T("2025-01-05")]
 
 
 def test_ultima_semana_completa():
-    assert last_complete_week(T("2025-12-31")) == T("2025-12-21")  # quarta: semana incompleta
-    assert last_complete_week(T("2025-12-27")) == T("2025-12-21")  # sábado: semana completa
+    assert last_complete_week(T("2025-12-31")) == T("2025-12-21")
+    assert last_complete_week(T("2025-12-27")) == T("2025-12-21")
 
 
 def test_data_de_sintomas_absurda_cai_para_notificacao():
     df = pd.DataFrame({
         "ano_arquivo": [2025, 2025, 2025, 2025, 2025],
         "dt_notificacao": pd.to_datetime(["2025-03-10"] * 4 + [None]),
-        "dt_sintomas": pd.to_datetime(["1950-01-11",   # absurda
-                                       "2025-03-12",   # posterior à notificação
-                                       None,           # nula
-                                       "2025-03-08",   # válida
-                                       None]),         # sem nenhuma data
+        "dt_sintomas": pd.to_datetime(["1950-01-11",
+                                       "2025-03-12",
+                                       None,
+                                       "2025-03-08",
+                                       None]),
     })
     r = add_reference_date(df)
     assert list(r["dt_ref"][:4]) == [T("2025-03-10")] * 3 + [T("2025-03-08")]
@@ -52,21 +52,20 @@ def test_painel_completo_com_zeros():
 
 def _fake():
     linhas = [
-        # nu, notif, sintomas, bairro, classi, ano, dup_exata
-        ("1", "2020-03-10", "2020-03-08", "Ibura", 10, 2020, False),        # válido
-        ("2", "2020-03-11", "2020-03-09", "IBURA", 11, 2020, False),        # válido, mesma semana
-        ("3", "2020-03-11", "2020-03-09", "IBURA", 5, 2020, False),         # descartado
-        ("4", "2020-03-11", "2020-03-09", "GRAAS", 12, 2020, False),        # apelido -> GRACAS
-        ("5", "2020-03-12", "2020-03-10", "ZONA RURAL", 10, 2020, False),   # não é bairro
-        ("6", "2020-03-12", None, None, 10, 2020, False),                   # bairro nulo
-        ("7", "2020-03-20", "1950-01-01", "BOA VIAGEM", 3, 2020, False),    # sintomas absurdos -> notificação
-        ("8", "2020-03-20", "2020-03-18", "BOA VIAGEM", 1, 2020, False),    # duplicata por nu (ver 8b)
-        ("8", "2020-03-20", "2020-03-18", "BOA VIAGEM", 1, 2020, False),    # 8b: igual ao anterior
-        ("9", "2020-03-20", "2020-03-18", "IBURA", 10, 2020, False),        # nu repetido, dados diferentes
-        ("9", "2020-03-21", "2020-03-19", "BOA VIAGEM", 10, 2020, False),   # idem (mantida)
-        ("10", "2020-03-22", "2020-03-20", "IBURA", 10, 2020, True),        # linha 100% duplicada
-        ("11", "2014-03-10", "2014-03-08", "IBURA", 10, 2014, False),       # fora do período
-        ("12", "2020-03-28", "2020-03-23", "IBURA", 10, 2020, False),       # define a última semana
+        ("1", "2020-03-10", "2020-03-08", "Ibura", 10, 2020, False),
+        ("2", "2020-03-11", "2020-03-09", "IBURA", 11, 2020, False),
+        ("3", "2020-03-11", "2020-03-09", "IBURA", 5, 2020, False),
+        ("4", "2020-03-11", "2020-03-09", "GRAAS", 12, 2020, False),
+        ("5", "2020-03-12", "2020-03-10", "ZONA RURAL", 10, 2020, False),
+        ("6", "2020-03-12", None, None, 10, 2020, False),
+        ("7", "2020-03-20", "1950-01-01", "BOA VIAGEM", 3, 2020, False),
+        ("8", "2020-03-20", "2020-03-18", "BOA VIAGEM", 1, 2020, False),
+        ("8", "2020-03-20", "2020-03-18", "BOA VIAGEM", 1, 2020, False),
+        ("9", "2020-03-20", "2020-03-18", "IBURA", 10, 2020, False),
+        ("9", "2020-03-21", "2020-03-19", "BOA VIAGEM", 10, 2020, False),
+        ("10", "2020-03-22", "2020-03-20", "IBURA", 10, 2020, True),
+        ("11", "2014-03-10", "2014-03-08", "IBURA", 10, 2014, False),
+        ("12", "2020-03-28", "2020-03-23", "IBURA", 10, 2020, False),
     ]
     df = pd.DataFrame(linhas, columns=["nu_notificacao", "dt_notificacao", "dt_sintomas", "bairro_raw",
                                        "classi_fin", "ano_arquivo", "dup_exata"])
@@ -81,10 +80,10 @@ def test_soma_do_painel_igual_aos_casos_validos():
     etapas = dict(res.funnel)
     assert etapas["Registros lidos (2013–2025)"] == 14
     assert etapas["Após período 2015–2025"] == 13
-    assert etapas["Após caso confirmado"] == 12   # tira o descartado (nu 3)
+    assert etapas["Após caso confirmado"] == 12
     assert etapas["Após data válida"] == 12
-    assert etapas["Após bairro válido"] == 10     # tira ZONA RURAL e nulo
-    assert etapas["Após duplicatas"] == 8        # tira dup exata (nu 10) e nu 8b
+    assert etapas["Após bairro válido"] == 10
+    assert etapas["Após duplicatas"] == 8
     assert etapas["Após janela do painel (casos no painel)"] == 8
     casos = res.funnel[-1][1]
     assert res.panel["casos"].sum() == casos

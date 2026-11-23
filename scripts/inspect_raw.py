@@ -8,10 +8,9 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import config  # noqa: E402
-from src import data_recife as dr  # noqa: E402
+from src import config
+from src import data_recife as dr
 
-# Nomes lógicos -> candidatos de coluna (comparação sem diferenciar maiúsculas)
 ALIASES = {
     "data_notificacao": ["dt_notificacao", "dt_notific"],
     "data_sintomas": ["dt_diagnostico_sintoma", "dt_sin_pri"],
@@ -59,7 +58,6 @@ def main() -> None:
     anos = sorted(data)
     out: list[str] = ["# Inspeção dos dados brutos de dengue (Recife)", ""]
 
-    # 1. Arquivos
     out += ["## 1. Arquivos lidos", ""]
     rows = [(p.name, y, data[y].attrs["encoding"], repr(data[y].attrs["sep"]), len(data[y]), data[y].shape[1])
             for p, y in zip(files, anos)]
@@ -68,7 +66,6 @@ def main() -> None:
     out += [f"Anos presentes: {anos[0]}–{anos[-1]} ({len(anos)} arquivos). "
             f"Anos faltando em 2013–2025: {faltando or 'nenhum'}.", ""]
 
-    # 2. Colunas e mudanças entre anos
     out += ["## 2. Colunas e mudanças entre anos", ""]
     grupos: dict[tuple, list[int]] = {}
     for y in anos:
@@ -80,11 +77,9 @@ def main() -> None:
     chave = [{"ano": y, **{k: find_col(data[y], k) or "—" for k in ALIASES}} for y in anos]
     out += [md_table(pd.DataFrame(chave)), ""]
 
-    # 3. Linhas por ano
     out += ["## 3. Linhas por ano", "",
             md_table(pd.DataFrame([(y, len(data[y])) for y in anos], columns=["ano", "linhas"])), ""]
 
-    # 4. Tipos e nulos
     out += ["## 4. Tipos inferidos e % de nulos", ""]
     for key in ALIASES:
         linhas = []
@@ -103,7 +98,6 @@ def main() -> None:
     nulos.insert(0, "coluna", nulos.index)
     out += [md_table(nulos.reset_index(drop=True)), ""]
 
-    # 5. Datas
     out += ["## 5. Intervalo de datas", ""]
     linhas = []
     for y in anos:
@@ -118,7 +112,6 @@ def main() -> None:
     out += [md_table(pd.DataFrame(linhas, columns=["ano_arquivo", "campo", "coluna", "mínimo", "máximo",
                                                    "datas não reconhecidas"])), ""]
 
-    # 6. Bairros
     out += ["## 6. Bairros (residência)", ""]
     series = {y: data[y][find_col(data[y], "bairro_residencia")] for y in anos}
     todos = pd.concat(series.values(), ignore_index=True)
@@ -141,7 +134,6 @@ def main() -> None:
                 f"({fora.sum() / len(norm) * 100:.1f}% dos não nulos). Os 25 mais frequentes:", "",
                 md_table(fora.head(25).rename_axis("nome").reset_index(name="registros")), ""]
 
-    # 7. Categóricas
     out += ["## 7. Valores distintos das colunas categóricas (contagem por ano)", ""]
     for key in CATEGORICAL:
         tabela = {}
@@ -152,7 +144,6 @@ def main() -> None:
         tab = pd.DataFrame(tabela).fillna(0).astype(int).rename_axis("valor").reset_index()
         out += [f"### {key}", "", md_table(tab), ""]
 
-    # 8. Exemplos
     out += ["## 8. Exemplos (5 linhas, colunas-chave): ano mais antigo e mais recente", ""]
     for y in (anos[0], anos[-1]):
         cols = [c for c in (find_col(data[y], k) for k in ALIASES) if c]
