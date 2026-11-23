@@ -122,7 +122,9 @@ def build_panel(df: pd.DataFrame, official: list[str] | None = None) -> PanelRes
     first = week_start(pd.Series([pd.Timestamp(f"{config.PANEL_START_YEAR}-01-01")])).iloc[0]
     if first < pd.Timestamp(f"{config.PANEL_START_YEAR}-01-01"):
         first += pd.Timedelta(days=7)  # primeira semana inteira dentro do período
-    last = last_complete_week(df.loc[df["ano_arquivo"] <= config.PANEL_END_YEAR, "dt_notificacao"].max())
+    last_dados = last_complete_week(df.loc[df["ano_arquivo"] <= config.PANEL_END_YEAR, "dt_notificacao"].max())
+    last = min(last_dados, pd.Timestamp(config.PANEL_END))  # corta a cauda ainda não classificada
+    ex["ultima_semana_completa_dados"] = last_dados
     na_janela = d["week_start"].between(first, last)
     ex["fora_da_janela"] = int((~na_janela).sum())
     d = d[na_janela]

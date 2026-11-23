@@ -15,6 +15,9 @@ SEED = 42
 CASE_CODES = (1, 2, 3, 4, 10, 11, 12)  # classificação final = caso confirmado
 PANEL_START_YEAR = 2015
 PANEL_END_YEAR = 2025
+# Última semana (domingo) confiável: depois dela a fração de casos ainda sem classificação
+# definitiva dispara (ver reports/cauda_2025.md).
+PANEL_END = "2025-08-17"
 BAIRRO_FUZZY_CUTOFF = 0.90  # similaridade mínima na correspondência aproximada de bairros
 
 # Rótulos de risco

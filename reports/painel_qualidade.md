@@ -1,6 +1,6 @@
 # Qualidade do painel bairro x semana
 
-Painel: **94 bairros** x **573 semanas** (2015-01-04 a 2025-12-21, semanas começando no domingo) = 53862 linhas. Soma de casos do painel: **60923** (último passo do funil: 60923; confere).
+Painel: **94 bairros** x **555 semanas** (2015-01-04 a 2025-08-17, semanas começando no domingo) = 52170 linhas. Soma de casos do painel: **59085** (último passo do funil: 59085; confere).
 
 ## Funil de registros
 
@@ -12,7 +12,7 @@ Painel: **94 bairros** x **573 semanas** (2015-01-04 a 2025-12-21, semanas come�
 | Após data válida | 61284 | 0 |
 | Após bairro válido | 60924 | -360 |
 | Após duplicatas | 60924 | 0 |
-| Após janela do painel (casos no painel) | 60923 | -1 |
+| Após janela do painel (casos no painel) | 59085 | -1839 |
 
 ## Detalhes do funil
 
@@ -81,7 +81,7 @@ Valores corrigidos por apelido ou correspondência aproximada:
 - Linhas 100% idênticas removidas: 0
 - `nu_notificacao` repetido com bairro, datas e classificação iguais (removidos): 0
 - Linhas com `nu_notificacao` repetido mas dados diferentes (mantidas): 1647
-- Casos fora da janela do painel (antes de 2015-01-04 ou após 2025-12-21): 1
+- Casos fora da janela do painel (antes de 2015-01-04 ou após 2025-08-17): 1839
 
 ## Casos totais por ano
 
@@ -97,7 +97,7 @@ Valores corrigidos por apelido ou correspondência aproximada:
 | 2022 | 1290 |
 | 2023 | 1417 |
 | 2024 | 2658 |
-| 2025 | 5035 |
+| 2025 | 3197 |
 
 ## Bairros com menos de 50 casos no período (8; só listados, não removidos)
 
@@ -105,8 +105,8 @@ Valores corrigidos por apelido ou correspondência aproximada:
 |---|---|
 | HIPODROMO | 48 |
 | SOLEDADE | 38 |
-| SANTO ANTONIO | 35 |
-| JAQUEIRA | 34 |
+| SANTO ANTONIO | 33 |
+| JAQUEIRA | 33 |
 | TORREAO | 29 |
 | PAISSANDU | 29 |
 | ILHA DO LEITE | 25 |
@@ -116,16 +116,16 @@ Valores corrigidos por apelido ou correspondência aproximada:
 
 | bairro | casos |
 |---|---|
-| COHAB | 4140 |
-| IBURA | 3219 |
-| VARZEA | 2591 |
-| BOA VIAGEM | 2430 |
-| IMBIRIBEIRA | 2333 |
-| IPUTINGA | 2236 |
-| AGUA FRIA | 2166 |
-| AFOGADOS | 2070 |
-| AREIAS | 1721 |
-| CAMPO GRANDE | 1495 |
+| COHAB | 3975 |
+| IBURA | 3113 |
+| VARZEA | 2527 |
+| BOA VIAGEM | 2340 |
+| IMBIRIBEIRA | 2214 |
+| IPUTINGA | 2197 |
+| AGUA FRIA | 2098 |
+| AFOGADOS | 2056 |
+| AREIAS | 1674 |
+| CASA AMARELA | 1457 |
 
 ## 10 semanas com mais casos (soma da cidade)
 
@@ -141,6 +141,20 @@ Valores corrigidos por apelido ou correspondência aproximada:
 | 2016-02-07 | 1041 |
 | 2015-03-08 | 999 |
 | 2016-01-31 | 947 |
+
+## Limiares de risco se calculados em todo o painel (informativo)
+
+- Quantil 0.6: **0** casos/semana/bairro
+- Quantil 0.85: **2** casos/semana/bairro
+- Regra usada aqui: baixo = casos <= q_mid; médio = q_mid < casos <= q_high; alto = casos > q_high.
+
+> **AVISO:** o limiar de baixo risco é 0: 'baixo' significa exatamente zero casos (72.2% das células do painel são zero).
+
+| classe | células | % |
+|---|---|---|
+| baixo | 37674 | 72.2 |
+| medio | 9144 | 17.5 |
+| alto | 5352 | 10.3 |
 
 ## Bairros da tabela oficial sem nenhum caso no painel (0)
 

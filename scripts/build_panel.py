@@ -76,6 +76,23 @@ def main() -> None:
     out += ["## 10 semanas com mais casos (soma da cidade)", "",
             md_table(por_semana.rename("casos").reset_index().assign(
                 week_start=lambda x: x["week_start"].dt.strftime("%Y-%m-%d"))), ""]
+    # Limiares de risco se fossem calculados em TODO o painel (só informativo: no treino real
+    # eles serão calculados apenas com a parte de treino)
+    q_mid, q_high = (float(panel["casos"].quantile(q)) for q in (config.Q_MID, config.Q_HIGH))
+    classe = pd.cut(panel["casos"], [-float("inf"), q_mid, q_high, float("inf")], labels=config.CLASSES)
+    dist = classe.value_counts().reindex(config.CLASSES)
+    tabela = pd.DataFrame({"classe": config.CLASSES, "células": dist.values,
+                           "%": (dist.values / len(panel) * 100).round(1)})
+    out += ["## Limiares de risco se calculados em todo o painel (informativo)", "",
+            f"- Quantil {config.Q_MID}: **{q_mid:g}** casos/semana/bairro",
+            f"- Quantil {config.Q_HIGH}: **{q_high:g}** casos/semana/bairro",
+            "- Regra usada aqui: baixo = casos <= q_mid; médio = q_mid < casos <= q_high; alto = casos > q_high.", ""]
+    if q_mid == q_high:
+        out += ["> **AVISO:** os dois limiares são iguais; a classe média fica vazia.", ""]
+    if q_mid == 0:
+        out += ["> **AVISO:** o limiar de baixo risco é 0: 'baixo' significa exatamente zero casos "
+                f"({(panel['casos'] == 0).mean() * 100:.1f}% das células do painel são zero).", ""]
+    out += [md_table(tabela), ""]
     sem_caso = ex["bairros_oficiais_sem_casos"]
     out += [f"## Bairros da tabela oficial sem nenhum caso no painel ({len(sem_caso)})", "",
             ", ".join(sem_caso) or "Nenhum.", ""]

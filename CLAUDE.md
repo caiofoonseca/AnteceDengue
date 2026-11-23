@@ -25,6 +25,7 @@
 - Caso = confirmado: CLASSI_FIN em 10, 11 ou 12 (anos 2021 a 2025) e 1 a 4 nos esquemas antigos. Descartados (5) e inconclusivos (8) não contam. Parâmetro em src/config.py (CASE_CODES).
 - Período usado: 2015 a 2025. Os anos de 2013 e 2014 ficam fora (2014 está incompleto e quebraria a série).
 - Data de referência do caso: data de início dos sintomas. Se estiver nula ou absurda (anterior em mais de 1 ano ao ano do arquivo, ou posterior à data de notificação), usa-se a data de notificação. Registros sem nenhuma data válida são descartados e contados.
+- Cauda de 2025: casos recentes demoram a ser classificados (CLASSI_FIN nula ou 8), o que deixa as últimas semanas artificialmente baixas. PANEL_END = 2025-08-17 (config.py): última semana em que a fração de registros nulos/inconclusivos ainda fica dentro de referência (média jan–jun/2025 = 0,27%) + 5 pontos percentuais (limite 5,27%). O painel é cortado nessa semana. Ver reports/cauda_2025.md.
 
 ## Stack obrigatória
 MLflow, Airflow (DAG semanal), MQTT com Mosquitto, Postgres, FastAPI, dashboard em Streamlit, tudo subindo com um único docker compose up. O modelo é salvo com joblib, e a versão do scikit-learn deve ser a mesma em todos os containers.
