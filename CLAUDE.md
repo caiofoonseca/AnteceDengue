@@ -37,6 +37,7 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Identificadores de código em inglês. Comentários, docs e mensagens para o usuário em português.
 - Testes com pytest. Todo passo termina com testes passando.
 - Commits pequenos, mensagem clara. Nunca commitar segredos nem dados brutos grandes (usar .env e .gitignore).
+- Não adicionar Co-Authored-By nem qualquer atribuição ao Claude nas mensagens de commit.
 
 ## Como trabalhar neste repositório
 - Um passo por vez. Só considere o passo concluído quando os critérios de pronto estiverem verificados e você mostrar a evidência (saída de comando ou teste).
