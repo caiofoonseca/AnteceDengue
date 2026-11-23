@@ -28,3 +28,7 @@ Projeto AnteceDengue (G15), CESAR School. Ferramenta: Claude Code (modelo Claude
 ## Passo 5 — Features, rótulos e validação (23/11/2026)
 - **O que o Claude Code fez:** criou `src/features.py`, `src/labels.py`, `src/validation.py` e `src/evaluate.py`, o script `scripts/make_split_summary.py` e o relatório `reports/split_resumo.md`, mais testes (incluindo teste de vazamento do futuro, conferido ao quebrar de propósito uma feature). Removeu os comentários `#` do código existente, a pedido do Caio.
 - **Verificação humana:** o Caio definiu as decisões do passo (sensor fora do treino, ffill causal de 2 semanas, class_weight balanced, F1-macro) e recebeu os tamanhos dos conjuntos, os limiares e as métricas do baseline.
+
+## Passo 6 — Experimentos 01 e 02 no MLflow (23/11/2026)
+- **O que o Claude Code fez:** criou `src/models.py` (6 candidatos como Pipelines), `src/tracking.py` (utilitário sobre o MLflow com `--no-mlflow`), `src/train.py` (experimentos 01 e 02, CV de janela expansiva, métricas, ROC, matrizes de confusão, importância do RandomForest, guarda que bloqueia o conjunto de teste), os testes correspondentes, `reports/metricas_comparacao.csv` e as figuras em `reports/figuras/`. Mudou o `MLFLOW_TRACKING_URI` padrão para SQLite e atualizou README e CLAUDE.md.
+- **Verificação humana:** o Caio definiu as regras (limiares fixos, média da CV só nos folds 2 a 5, comparar sempre contra a persistência, teste proibido neste passo) e deve conferir os runs no `mlflow ui`.

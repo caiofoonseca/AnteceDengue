@@ -35,6 +35,13 @@
 - Definições das features (src/features.py): linha t usa só semanas <= t; alvo = casos(t+1). Tendência = média móvel 4 - média móvel 8. Médias móveis e chuva acumulada incluem a semana t. Média histórica expansiva usa só semanas anteriores a t. Sazonalidade = seno/cosseno do dia do ano do meio da semana. As 8 primeiras semanas do painel são descartadas (histórico incompleto).
 - Validação: o alvo da linha t cai na semana t+1. Linha de um conjunto não pode ter alvo na semana de início do conjunto seguinte; GAP_WEEKS semanas de linhas são excluídas entre os conjuntos.
 
+## Decisões de ML (passo 6)
+- Os limiares de rótulo ficam fixos, ajustados só no treino (hoje 0 e 1), e valem para todos os modelos. Isso mantém os resultados comparáveis. Na CV, cada fold usa os limiares ajustados no treino daquele fold (nunca nos alvos da validação do fold).
+- Seleção de modelo: média do F1-macro nos folds 2 a 5 da CV de janela expansiva. O fold 1 é reportado, mas fica fora da média (treina só em 2015-2016 e não tem classe alto na validação).
+- Comparar sempre contra a persistência no mesmo conjunto. Validação e teste têm distribuições de classe diferentes e não são comparáveis entre si.
+- O conjunto de teste NÃO é usado nos experimentos 01 e 02 (guarda em código em src/train.py). MLflow local: MLFLOW_TRACKING_URI padrão sqlite:///mlflow.db (permite o Model Registry).
+- Candidatos e class_weight: LogisticRegression, DecisionTree e RandomForest usam class_weight="balanced"; AdaBoost usa class_weight="balanced" no estimador-base (stump); KNN e MLP não suportam class_weight.
+
 ## Registro de uso de IA
 - Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
 
