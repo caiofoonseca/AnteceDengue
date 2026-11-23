@@ -1,0 +1,29 @@
+{
+  "folds": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "f1_base_por_fold": [
+    0.6013441393992646,
+    0.6065423148394142,
+    0.6071459092633588,
+    0.6052269322804816
+  ],
+  "f1_cidade_por_fold": [
+    0.6022087422728997,
+    0.6226691321585601,
+    0.6148833776682442,
+    0.6104289159889357
+  ],
+  "f1_base_media": 0.6050648239456299,
+  "f1_cidade_media": 0.6125475420221599,
+  "diferenca_media": 0.007482718076530004,
+  "desvio_entre_folds_base": 0.0026066369167103984,
+  "desvio_das_diferencas_pareadas": 0.00642356462676037,
+  "conjunto_escolhido": "base+cidade",
+  "motivo": "a diferença média supera o desvio entre folds",
+  "n_features_base": 21,
+  "n_features_cidade": 27
+}

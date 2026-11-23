@@ -8,6 +8,7 @@ Suporte a class_weight (desbalanceamento de classes):
 - AdaBoost: não tem o parâmetro; o estimador-base (stump) usa class_weight="balanced".
 - KNN e MLP: não suportam class_weight, ficam sem ponderação.
 """
+from scipy.stats import loguniform, randint
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -63,10 +64,40 @@ def candidate_names() -> list[str]:
     return list(CLASS_WEIGHT_SUPPORT)
 
 
-def build_model(name: str) -> Pipeline:
-    """Pipeline SimpleImputer(mediana) [+ StandardScaler] + classificador."""
+def build_model(name: str, params: dict | None = None) -> Pipeline:
+    """Pipeline SimpleImputer(mediana) [+ StandardScaler] + classificador.
+
+    params: hiperparâmetros com prefixo do Pipeline (ex.: {"clf__max_depth": 10}).
+    """
     etapas = [("imputer", SimpleImputer(strategy="median"))]
     if name in NEEDS_SCALER:
         etapas.append(("scaler", StandardScaler()))
     etapas.append(("clf", _classifier(name)))
-    return Pipeline(etapas)
+    pipe = Pipeline(etapas)
+    if params:
+        pipe.set_params(**params)
+    return pipe
+
+
+SEARCH_SPACES = {
+    "rf": {
+        "clf__n_estimators": randint(100, 500),
+        "clf__max_depth": [None, 6, 8, 10, 12, 16, 20],
+        "clf__min_samples_leaf": randint(1, 40),
+        "clf__min_samples_split": randint(2, 40),
+        "clf__max_features": ["sqrt", "log2", 0.3, 0.5],
+        "clf__class_weight": ["balanced", "balanced_subsample", None],
+        "clf__max_samples": [None, 0.5, 0.7, 0.9],
+    },
+    "logreg": {
+        "clf__C": loguniform(1e-3, 1e2),
+        "clf__class_weight": ["balanced", None],
+        "clf__tol": loguniform(1e-5, 1e-3),
+    },
+}
+
+
+def search_space(name: str) -> dict:
+    if name not in SEARCH_SPACES:
+        raise ValueError(f"sem espaço de busca para o modelo {name}")
+    return SEARCH_SPACES[name]

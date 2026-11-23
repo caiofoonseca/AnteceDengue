@@ -22,8 +22,7 @@ Projeto AnteceDengue (G15), CESAR School. Ferramenta: Claude Code (modelo Claude
 
 ## Passo 4 — Cauda de 2025 e clima semanal (23/11/2026)
 - **O que o Claude Code fez:** analisou a fração de registros ainda sem classificação e propôs PANEL_END = 2025-08-17 (critério numérico em `reports/cauda_2025.md`); calculou os limiares de quantil do painel; pesquisou as fontes de clima (InfoDengue sem chuva; INMET A301 sem dados utilizáveis de 2022 em diante); montou o clima semanal com chuva do Open-Meteo (ERA5) e comparou com o INMET em 2015–2021 (Pearson 0,66; Spearman 0,80).
-- **Também neste passo:** a pedido do Caio, removeu o trailer Co-Authored-By dos commits (reescrita de histórico e push forçado, com confirmação prévia) e configurou `.claude/settings.json`.
-- **Verificação humana:** o Caio escolheu usar uma única fonte de chuva para todo o período e confirmou a reescrita do histórico. A licença do Open-Meteo citada em `docs/DADOS.md` veio de memória do assistente e precisa ser conferida pelo grupo.
+- **Verificação humana:** o Caio escolheu usar uma única fonte de chuva para todo o período. A licença do Open-Meteo citada em `docs/DADOS.md` veio de memória do assistente e precisa ser conferida pelo grupo.
 
 ## Passo 5 — Features, rótulos e validação (23/11/2026)
 - **O que o Claude Code fez:** criou `src/features.py`, `src/labels.py`, `src/validation.py` e `src/evaluate.py`, o script `scripts/make_split_summary.py` e o relatório `reports/split_resumo.md`, mais testes (incluindo teste de vazamento do futuro, conferido ao quebrar de propósito uma feature). Removeu os comentários `#` do código existente, a pedido do Caio.
@@ -32,3 +31,7 @@ Projeto AnteceDengue (G15), CESAR School. Ferramenta: Claude Code (modelo Claude
 ## Passo 6 — Experimentos 01 e 02 no MLflow (23/11/2026)
 - **O que o Claude Code fez:** criou `src/models.py` (6 candidatos como Pipelines), `src/tracking.py` (utilitário sobre o MLflow com `--no-mlflow`), `src/train.py` (experimentos 01 e 02, CV de janela expansiva, métricas, ROC, matrizes de confusão, importância do RandomForest, guarda que bloqueia o conjunto de teste), os testes correspondentes, `reports/metricas_comparacao.csv` e as figuras em `reports/figuras/`. Mudou o `MLFLOW_TRACKING_URI` padrão para SQLite e atualizou README e CLAUDE.md.
 - **Verificação humana:** o Caio definiu as regras (limiares fixos, média da CV só nos folds 2 a 5, comparar sempre contra a persistência, teste proibido neste passo) e deve conferir os runs no `mlflow ui`.
+
+## Passo 7 — Otimização, modelo final e teste (23/11/2026)
+- **O que o Claude Code fez:** criou `src/search.py` (ablação de features, RandomizedSearchCV com seleção pela média dos folds 2 a 5, curva de aprendizado, escolha do modelo), `src/final.py` (reajuste em treino+validação, avaliação única no teste com trava, bootstrap por blocos de semanas, `model_meta.json`, registro no MLflow com alias `champion`), `src/reporting.py`, as opções `--exp 03`, `--final` e `--force-reeval` em `src/train.py`, as features opcionais da cidade, os testes e os relatórios em `reports/`.
+- **Verificação humana:** o Caio definiu as regras (só RF e LogReg, limiares fixos na busca com a limitação registrada, teste uma única vez) e deve conferir o experimento 03 e o alias `champion` no `mlflow ui`, além de `reports/teste_final.md`.

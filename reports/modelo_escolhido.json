@@ -1,0 +1,110 @@
+{
+  "name": "rf",
+  "display": "RandomForest",
+  "best_params": {
+    "clf__class_weight": "balanced_subsample",
+    "clf__max_depth": 20,
+    "clf__max_features": "sqrt",
+    "clf__max_samples": 0.9,
+    "clf__min_samples_leaf": 26,
+    "clf__min_samples_split": 26,
+    "clf__n_estimators": 351
+  },
+  "cv_f1_media_f2_5": 0.6144941147213941,
+  "cv_f1_desvio_f2_5": 0.01051296429382927,
+  "cv_f1_fold1": 0.4442498554868557,
+  "val_f1_macro": 0.5985960379222592,
+  "val_recall_alto": 0.5108695652173914,
+  "val_auc_macro": 0.838091332352423,
+  "train_f1_macro": 0.6835101346487056,
+  "search_seconds": 385.19717990001664,
+  "n_iter": 30,
+  "pers_cv_f1": 0.5713223809454572,
+  "validacao_confirma": true,
+  "justificativa": [
+    "RandomForest tem o maior F1-macro médio na CV (folds 2 a 5): 0.614 contra LogisticRegression 0.601.",
+    "Na validação o F1-macro dele é 0.599 (persistência: 0.558; LogisticRegression: 0.572).",
+    "Confirmado na validação."
+  ],
+  "conjunto_features": "base+cidade",
+  "features": [
+    "casos_t",
+    "casos_lag1",
+    "casos_lag2",
+    "casos_lag3",
+    "casos_mm4",
+    "casos_mm8",
+    "tendencia",
+    "casos_media_hist",
+    "temp_media_lag1",
+    "temp_media_lag2",
+    "temp_media_lag4",
+    "temp_media_lag8",
+    "umid_media_lag1",
+    "umid_media_lag2",
+    "umid_media_lag4",
+    "umid_media_lag8",
+    "chuva_acum2",
+    "chuva_acum4",
+    "chuva_acum8",
+    "sazon_sin",
+    "sazon_cos",
+    "cidade_total_t",
+    "cidade_lag1",
+    "cidade_lag2",
+    "cidade_lag3",
+    "cidade_lag4",
+    "cidade_var_semanal"
+  ],
+  "thresholds": [
+    0.0,
+    1.0
+  ],
+  "persistencia_val_f1_macro": 0.5582742123392598,
+  "candidatos": [
+    {
+      "name": "rf",
+      "display": "RandomForest",
+      "best_params": {
+        "clf__class_weight": "balanced_subsample",
+        "clf__max_depth": 20,
+        "clf__max_features": "sqrt",
+        "clf__max_samples": 0.9,
+        "clf__min_samples_leaf": 26,
+        "clf__min_samples_split": 26,
+        "clf__n_estimators": 351
+      },
+      "cv_f1_media_f2_5": 0.6144941147213941,
+      "cv_f1_desvio_f2_5": 0.01051296429382927,
+      "cv_f1_fold1": 0.4442498554868557,
+      "val_f1_macro": 0.5985960379222592,
+      "val_recall_alto": 0.5108695652173914,
+      "val_auc_macro": 0.838091332352423,
+      "train_f1_macro": 0.6835101346487056,
+      "search_seconds": 385.19717990001664,
+      "n_iter": 30,
+      "pers_cv_f1": 0.5713223809454572
+    },
+    {
+      "name": "logreg",
+      "display": "LogisticRegression",
+      "best_params": {
+        "clf__C": 8.43101393208247,
+        "clf__class_weight": "balanced",
+        "clf__tol": 5.820013372709852e-05
+      },
+      "cv_f1_media_f2_5": 0.600759326039112,
+      "cv_f1_desvio_f2_5": 0.033169162837915385,
+      "cv_f1_fold1": 0.44725260101670844,
+      "val_f1_macro": 0.5718001145534987,
+      "val_recall_alto": 0.3967391304347826,
+      "val_auc_macro": 0.8229216763075966,
+      "train_f1_macro": 0.6349188162527112,
+      "search_seconds": 50.26285220007412,
+      "n_iter": 30,
+      "pers_cv_f1": 0.5713223809454572
+    }
+  ],
+  "gap_treino_val": 0.08491409672644634,
+  "diagnostico": "Com todo o treino: F1 treino 0.684, validação 0.599, gap 0.085. Gap moderado: algum overfitting. A validação quase não melhora nas últimas frações: mais dados do mesmo tipo ajudam pouco. Gap com a menor fração de treino: 0.121."
+}

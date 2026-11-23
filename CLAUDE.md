@@ -42,6 +42,12 @@
 - O conjunto de teste NÃO é usado nos experimentos 01 e 02 (guarda em código em src/train.py). MLflow local: MLFLOW_TRACKING_URI padrão sqlite:///mlflow.db (permite o Model Registry).
 - Candidatos e class_weight: LogisticRegression, DecisionTree e RandomForest usam class_weight="balanced"; AdaBoost usa class_weight="balanced" no estimador-base (stump); KNN e MLP não suportam class_weight.
 
+## Decisões de ML (passo 7)
+- Otimizar só RandomForest e LogisticRegression (os dois que superaram a persistência).
+- Na otimização, a CV de janela expansiva usa limiares fixos (0 e 1, do treino inteiro), porque o RandomizedSearchCV exige um y único. Limitação: em cada fold os limiares usam alvos que seriam da validação do fold. Seleção: média do F1-macro nos folds 2 a 5.
+- O teste é avaliado UMA única vez (`--final`), com o modelo já escolhido; `reports/teste_final.json` trava reavaliações (`--force-reeval` invalida a conclusão).
+- Conjunto de features: decidido por ablação (atual x atual + features da cidade, só passado); se a diferença for menor que o desvio entre folds, fica o conjunto mais simples.
+
 ## Registro de uso de IA
 - Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
 

@@ -11,14 +11,30 @@ from src import config
 CLIMATE_VARS = ("temp_media", "umid_media")
 
 
-def feature_columns() -> list[str]:
-    """Nomes das colunas de entrada do modelo, na ordem em que build_features as cria."""
+CITY_COLUMNS = ["cidade_total_t"] + [f"cidade_lag{k}" for k in config.CITY_LAGS] + ["cidade_var_semanal"]
+
+
+def feature_columns(city: bool = False) -> list[str]:
+    """Nomes das colunas de entrada do modelo, na ordem em que build_features as cria.
+
+    city=True acrescenta as features da cidade inteira (total de casos em t, lags e variação semanal).
+    """
     cols = ["casos_t"] + [f"casos_lag{k}" for k in config.CASE_LAGS]
     cols += [f"casos_mm{w}" for w in config.ROLLING_WINDOWS] + ["tendencia", "casos_media_hist"]
     for v in CLIMATE_VARS:
         cols += [f"{v}_lag{k}" for k in config.CLIMATE_LAGS]
     cols += [f"chuva_acum{w}" for w in config.RAIN_WINDOWS] + ["sazon_sin", "sazon_cos"]
-    return cols
+    return cols + CITY_COLUMNS if city else cols
+
+
+def city_features(panel: pd.DataFrame) -> pd.DataFrame:
+    """Total de casos da cidade na semana t, lags 1 a 4 e variação semanal (t menos t-1). Só passado e presente."""
+    total = panel.groupby("week_start")["casos"].sum().sort_index()
+    out = pd.DataFrame({"week_start": total.index, "cidade_total_t": total.to_numpy()})
+    for k in config.CITY_LAGS:
+        out[f"cidade_lag{k}"] = total.shift(k).to_numpy()
+    out["cidade_var_semanal"] = (total - total.shift(1)).to_numpy()
+    return out
 
 
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -46,11 +62,13 @@ def climate_features(clima: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def build_features(panel: pd.DataFrame, clima: pd.DataFrame, keep_last: bool = False) -> pd.DataFrame:
+def build_features(panel: pd.DataFrame, clima: pd.DataFrame, keep_last: bool = False,
+                   city: bool = False) -> pd.DataFrame:
     """Uma linha por (bairro, week_start = t), com features de t e target_casos = casos(t+1).
 
     keep_last=False: descarta a última semana do painel (não tem alvo).
     keep_last=True: mantém essa linha (target_casos nulo), para inferência.
+    city=True acrescenta as features da cidade inteira (ver city_features).
     Sempre descarta as primeiras MAX_HISTORY_WEEKS semanas de cada bairro (histórico incompleto).
     """
     p = panel.sort_values(["bairro", "week_start"]).reset_index(drop=True)
@@ -65,6 +83,8 @@ def build_features(panel: pd.DataFrame, clima: pd.DataFrame, keep_last: bool = F
     out["casos_media_hist"] = g.transform(lambda s: s.shift(1).expanding().mean())
 
     out = out.merge(climate_features(clima), on="week_start", how="left")
+    if city:
+        out = out.merge(city_features(p), on="week_start", how="left")
 
     meio = out["week_start"] + pd.Timedelta(days=3)
     ang = 2 * np.pi * meio.dt.dayofyear / 365.25
@@ -75,4 +95,4 @@ def build_features(panel: pd.DataFrame, clima: pd.DataFrame, keep_last: bool = F
     out = out[out["_pos"] >= config.MAX_HISTORY_WEEKS].drop(columns="_pos")
     if not keep_last:
         out = out[out["target_casos"].notna()]
-    return out.reset_index(drop=True)[["bairro", "week_start"] + feature_columns() + ["target_casos"]]
+    return out.reset_index(drop=True)[["bairro", "week_start"] + feature_columns(city) + ["target_casos"]]

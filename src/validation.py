@@ -64,12 +64,14 @@ def temporal_split(df: pd.DataFrame, val_weeks: int = config.VAL_WEEKS, test_wee
 
 
 def expanding_window_splits(train_df: pd.DataFrame, n_splits: int = config.CV_SPLITS,
-                            gap_weeks: int = config.GAP_WEEKS) -> list[Fold]:
+                            gap_weeks: int = config.GAP_WEEKS,
+                            thresholds: tuple[float, float] | None = None) -> list[Fold]:
     """CV de janela expansiva sobre o treino: o treino de cada fold cresce e a validação é o bloco seguinte.
 
     Blocos de validação do mesmo tamanho cobrem o fim do treino; tudo antes do primeiro bloco
     (menos o gap) é o treino do fold 1. Os limiares de rótulo de cada fold usam só os alvos do
-    treino daquele fold.
+    treino daquele fold. Se thresholds for passado, todos os folds usam esses limiares fixos (necessário
+    quando o y precisa ser único, como no RandomizedSearchCV).
     """
     df = train_df.reset_index(drop=True)
     semanas = _weeks(df)
@@ -85,7 +87,7 @@ def expanding_window_splits(train_df: pd.DataFrame, n_splits: int = config.CV_SP
         a = vs - 1 - gap_weeks
         tr = np.flatnonzero(ws <= semanas[a])
         va = np.flatnonzero((ws >= semanas[vs]) & (ws <= semanas[vs + b - 1]))
-        thr = fit_thresholds(df.loc[tr, "target_casos"])
+        thr = thresholds if thresholds is not None else fit_thresholds(df.loc[tr, "target_casos"])
         folds.append(Fold(tr, va, thr, apply_thresholds(df.loc[tr, "target_casos"], thr),
                           apply_thresholds(df.loc[va, "target_casos"], thr)))
     return folds

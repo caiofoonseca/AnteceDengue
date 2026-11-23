@@ -1,0 +1,186 @@
+{
+  "modelo": "RandomForest",
+  "best_params": {
+    "clf__class_weight": "balanced_subsample",
+    "clf__max_depth": 20,
+    "clf__max_features": "sqrt",
+    "clf__max_samples": 0.9,
+    "clf__min_samples_leaf": 26,
+    "clf__min_samples_split": 26,
+    "clf__n_estimators": 351
+  },
+  "thresholds": [
+    0.0,
+    1.0
+  ],
+  "features": [
+    "casos_t",
+    "casos_lag1",
+    "casos_lag2",
+    "casos_lag3",
+    "casos_mm4",
+    "casos_mm8",
+    "tendencia",
+    "casos_media_hist",
+    "temp_media_lag1",
+    "temp_media_lag2",
+    "temp_media_lag4",
+    "temp_media_lag8",
+    "umid_media_lag1",
+    "umid_media_lag2",
+    "umid_media_lag4",
+    "umid_media_lag8",
+    "chuva_acum2",
+    "chuva_acum4",
+    "chuva_acum8",
+    "sazon_sin",
+    "sazon_cos",
+    "cidade_total_t",
+    "cidade_lag1",
+    "cidade_lag2",
+    "cidade_lag3",
+    "cidade_lag4",
+    "cidade_var_semanal"
+  ],
+  "periodo_teste": {
+    "inicio": "2025-02-16",
+    "fim": "2025-08-10",
+    "semanas": 26,
+    "linhas": 2444
+  },
+  "distribuicao_classes_teste": {
+    "baixo": 1510,
+    "medio": 374,
+    "alto": 560
+  },
+  "modelo_teste": {
+    "f1_macro": 0.6106199428711165,
+    "balanced_accuracy": 0.6199362917954659,
+    "recall_baixo": 0.756953642384106,
+    "recall_medio": 0.40106951871657753,
+    "recall_alto": 0.7017857142857142,
+    "confusion_matrix": [
+      [
+        1143,
+        303,
+        64
+      ],
+      [
+        131,
+        150,
+        93
+      ],
+      [
+        35,
+        132,
+        393
+      ]
+    ],
+    "auc_macro": 0.816959415727711,
+    "auc_por_classe": {
+      "baixo": 0.8715284966745609,
+      "medio": 0.662221963884368,
+      "alto": 0.9171277866242038
+    }
+  },
+  "persistencia_teste": {
+    "f1_macro": 0.5704402314895852,
+    "balanced_accuracy": 0.5678208640470035,
+    "recall_baixo": 0.8350993377483443,
+    "recall_medio": 0.21657754010695188,
+    "recall_alto": 0.6517857142857143,
+    "confusion_matrix": [
+      [
+        1261,
+        176,
+        73
+      ],
+      [
+        195,
+        81,
+        98
+      ],
+      [
+        86,
+        109,
+        365
+      ]
+    ]
+  },
+  "diferenca_f1_macro": 0.04017971138153131,
+  "diferenca_recall_alto": 0.04999999999999993,
+  "bootstrap": {
+    "bloco_1": {
+      "block_weeks": 1,
+      "resamples": 1000,
+      "f1_diff_mean": 0.03989684899960213,
+      "f1_diff_ci95": [
+        0.017362328337648763,
+        0.0611219656633985
+      ],
+      "f1_model_ci95": [
+        0.5890788521385542,
+        0.6288599182443605
+      ],
+      "f1_persistence_ci95": [
+        0.5526096913402235,
+        0.5880992762461763
+      ],
+      "prob_f1_diff_gt0": 1.0,
+      "recall_alto_diff_mean": 0.04937184263605667,
+      "recall_alto_diff_ci95": [
+        0.0204060892649743,
+        0.08024838892429717
+      ]
+    },
+    "bloco_2": {
+      "block_weeks": 2,
+      "resamples": 1000,
+      "f1_diff_mean": 0.03875478061919619,
+      "f1_diff_ci95": [
+        0.019859720282831513,
+        0.05714918407896815
+      ],
+      "f1_model_ci95": [
+        0.5841844988338466,
+        0.6243404203342002
+      ],
+      "f1_persistence_ci95": [
+        0.5494198203583223,
+        0.583719055945218
+      ],
+      "prob_f1_diff_gt0": 1.0,
+      "recall_alto_diff_mean": 0.04919711602196585,
+      "recall_alto_diff_ci95": [
+        0.021388401858507912,
+        0.08120286576168922
+      ]
+    },
+    "bloco_4": {
+      "block_weeks": 4,
+      "resamples": 1000,
+      "f1_diff_mean": 0.03704691520267448,
+      "f1_diff_ci95": [
+        0.02073103256930408,
+        0.05389988511675641
+      ],
+      "f1_model_ci95": [
+        0.5810375605713105,
+        0.6216054214509492
+      ],
+      "f1_persistence_ci95": [
+        0.5482398375864224,
+        0.5839841000902729
+      ],
+      "prob_f1_diff_gt0": 1.0,
+      "recall_alto_diff_mean": 0.04994559848685357,
+      "recall_alto_diff_ci95": [
+        0.02585505212510024,
+        0.07321837441786118
+      ]
+    }
+  },
+  "conclusao": "O modelo supera a persistência de forma estatisticamente convincente: diferença de F1-macro +0.040, IC95% [+0.021, +0.054] exclui zero (bloco de 4 semanas).",
+  "avaliado_em": "2026-11-23T20:44:10.556488+00:00",
+  "force_reeval": false
+}
