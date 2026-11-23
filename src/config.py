@@ -11,6 +11,12 @@ REPORTS_DIR = ROOT / "reports"
 
 SEED = 42
 
+# Dados de casos (ver CLAUDE.md, "Decisões de dados")
+CASE_CODES = (1, 2, 3, 4, 10, 11, 12)  # classificação final = caso confirmado
+PANEL_START_YEAR = 2015
+PANEL_END_YEAR = 2025
+BAIRRO_FUZZY_CUTOFF = 0.90  # similaridade mínima na correspondência aproximada de bairros
+
 # Rótulos de risco
 CLASSES = ["baixo", "medio", "alto"]
 Q_MID = 0.60

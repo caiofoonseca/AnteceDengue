@@ -80,6 +80,47 @@ def load_all(raw_dir: Path | None = None) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+# Esquema único: nome padronizado -> candidatos de coluna (minúsculas) nos arquivos de cada ano
+COLUMN_MAP = {
+    "nu_notificacao": ["nu_notificacao", "nu_notific"],
+    "dt_notificacao": ["dt_notificacao", "dt_notific"],
+    "dt_sintomas": ["dt_diagnostico_sintoma", "dt_sin_pri"],
+    "bairro_raw": ["no_bairro_residencia", "nm_bairro"],
+    "classi_fin": ["tp_classificacao_final", "classi_fin"],
+}
+
+
+def standardize(df: pd.DataFrame, year: int) -> pd.DataFrame:
+    """Mapeia as colunas de um ano para o esquema único e normaliza tipos.
+
+    - datas de formatos mistos viram datetime;
+    - classificação final vira inteiro ('10.0' -> 10);
+    - 'dup_exata' marca linhas 100% idênticas a outra linha do mesmo arquivo (já vistas antes).
+    """
+    lower = {c.lower(): c for c in df.columns}
+    out = pd.DataFrame(index=df.index)
+    for novo, candidatos in COLUMN_MAP.items():
+        col = next((lower[c] for c in candidatos if c in lower), None)
+        if col is None:
+            raise KeyError(f"Ano {year}: nenhuma coluna entre {candidatos} para '{novo}'")
+        out[novo] = df[col]
+    out["nu_notificacao"] = out["nu_notificacao"].astype("string").str.strip().str.replace(r"\.0$", "", regex=True)
+    out["dt_notificacao"] = parse_date_series(out["dt_notificacao"])
+    out["dt_sintomas"] = parse_date_series(out["dt_sintomas"])
+    out["classi_fin"] = pd.to_numeric(out["classi_fin"], errors="coerce").astype("Int64")
+    out["ano_arquivo"] = year
+    out["dup_exata"] = df.duplicated(keep="first").to_numpy()
+    return out.reset_index(drop=True)
+
+
+def load_standardized(raw_dir: Path | None = None) -> pd.DataFrame:
+    """Todos os anos no esquema único (uma linha por notificação)."""
+    frames = [standardize(df, y) for y, df in load_each(raw_dir).items()]
+    if not frames:
+        raise FileNotFoundError(f"Nenhum CSV encontrado em {raw_dir or config.DATA_RAW}")
+    return pd.concat(frames, ignore_index=True)
+
+
 def parse_date_series(s: pd.Series) -> pd.Series:
     """Converte datas em texto para datetime, aceitando AAAA-MM-DD, AAAA/MM/DD e DD/MM/AAAA.
 
