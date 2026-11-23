@@ -38,3 +38,15 @@ Saídas: `reports/metricas_comparacao.csv` (experimento 02), `reports/metricas_b
 ### Otimização e avaliação final (passo 7)
 
 `--exp 03` grava `reports/modelo_escolhido.json`, `reports/otimizacao_resumo.md` e `reports/busca_*.csv`. `--final` grava `reports/teste_final.json` e `.md`, `models/best_model.joblib`, `models/model_meta.json` e registra o modelo `antecedengue-risk-classifier` com o alias `champion`. Se `teste_final.json` já existir, `--final` se recusa a rodar; `--force-reeval` ignora a trava, mas reavaliar o teste invalida a conclusão.
+
+## Análise exploratória (notebook)
+
+`notebooks/01_eda.ipynb` usa só treino e validação (o teste fica bloqueado) e lê `data/processed/` e `reports/`. As saídas já ficam salvas no arquivo; para abrir e rodar de novo:
+
+```powershell
+pip install -r requirements.txt
+jupyter lab notebooks/01_eda.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb   # roda de cima a baixo, sem abrir o Jupyter
+```
+
+Os gráficos são salvos em `reports/figuras/eda_*.png` (150 dpi). A seção 9 precisa de `models/best_model.joblib` (gerado por `python -m src.train --final`).
