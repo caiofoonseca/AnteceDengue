@@ -27,21 +27,34 @@ def md_table(df: pd.DataFrame) -> str:
 
 
 def validar_com_inmet(chuva_om: pd.DataFrame) -> tuple[str, int]:
-    """Compara a chuva semanal do Open-Meteo com o INMET A301 nas semanas em que o INMET tem dados."""
-    partes = []
-    for p in sorted(dc.CLIMA_RAW.glob("inmet_A301_*.csv")):
-        partes.append(dc.read_inmet_hourly(p))
+    """Compara a chuva semanal do Open-Meteo (que alimenta o modelo) com o INMET A301.
+
+    O INMET entra só como verificação de sanidade, nas semanas em que tem >= 80% das horas medidas.
+    Devolve (texto em markdown com tabela por ano e total, número de semanas comparadas).
+    """
+    partes = [dc.read_inmet_hourly(p) for p in sorted(dc.CLIMA_RAW.glob("inmet_A301_*.csv"))]
     if not partes:
-        return "Arquivos do INMET não encontrados em data/raw/clima/; validação não executada.", 0
+        return "Arquivos do INMET não encontrados em data/raw/clima/; verificação não executada.", 0
     inmet = dc.weekly_rain(pd.concat(partes, ignore_index=True)).dropna(subset=["chuva_mm"])
     j = inmet.merge(chuva_om[["week_start", "chuva_mm"]], on="week_start", suffixes=("_inmet", "_om")).dropna()
-    j = j[(j["week_start"] >= "2015-01-04")]
-    r = j["chuva_mm_inmet"].corr(j["chuva_mm_om"])
-    rho = j["chuva_mm_inmet"].corr(j["chuva_mm_om"], method="spearman")
-    vies = j["chuva_mm_om"].sum() / j["chuva_mm_inmet"].sum()
-    texto = (f"{len(j)} semanas com dados nas duas fontes ({j['week_start'].min().date()} a "
-             f"{j['week_start'].max().date()}): correlação de Pearson **{r:.2f}**, Spearman **{rho:.2f}**; "
-             f"chuva total Open-Meteo / INMET = **{vies:.2f}**.")
+    j = j[j["week_start"] >= "2015-01-04"].assign(ano=lambda x: x["week_start"].dt.year)
+
+    def resumo(g: pd.DataFrame) -> list:
+        return [len(g), f"{g['chuva_mm_inmet'].corr(g['chuva_mm_om']):.2f}",
+                f"{g['chuva_mm_inmet'].corr(g['chuva_mm_om'], method='spearman'):.2f}",
+                f"{g['chuva_mm_om'].sum() / g['chuva_mm_inmet'].sum():.2f}"]
+
+    linhas = []
+    for ano in range(config.PANEL_START_YEAR, config.PANEL_END_YEAR + 1):
+        g = j[j["ano"] == ano]
+        linhas.append([ano, *resumo(g)] if len(g) >= 10 else [ano, len(g), "—", "—", "—"])
+    linhas.append(["**total**", *resumo(j)])
+    tab = pd.DataFrame(linhas, columns=["ano", "semanas comparadas", "Pearson", "Spearman", "chuva Open-Meteo / INMET"])
+    anos_usados = sorted(j["ano"].unique())
+    texto = (f"Anos do INMET usados na comparação: **{', '.join(map(str, anos_usados))}** "
+             f"({len(j)} semanas, {j['week_start'].min().date()} a {j['week_start'].max().date()}). "
+             "Sem dado de chuva utilizável no INMET: 2022 e 2023 (arquivos vazios), 2024 e 2025 (estação ausente no zip). "
+             "Em 2021 só entram as semanas com >= 80% das horas medidas.\n\n" + md_table(tab))
     return texto, len(j)
 
 
@@ -83,10 +96,11 @@ def main() -> None:
            "## Fontes", "",
            "- **Temperatura e umidade:** InfoDengue (`alertcity`, geocode 2611606), valores semanais do município. "
            "A resposta real da API não traz precipitação.",
-           "- **Chuva:** Open-Meteo Historical Weather API, modelo ERA5 (**reanálise em grade, não é observação "
-           "de estação**), precipitação diária somada por semana (domingo a sábado, dia local de Recife).",
-           "- **INMET (estação A301 de Recife) foi tentado primeiro** e descartado: arquivos de 2022 e 2023 sem nenhum "
-           "valor de chuva, 2024 e 2025 sem a estação no zip, 2021 com 14,5% de horas vazias. Usado só para validar.", "",
+           "- **Chuva (alimenta o modelo, fonte única em todo o período 2015 até PANEL_END):** Open-Meteo "
+           "Historical Weather API, modelo ERA5. **É reanálise em grade (~25 km), não medição de estação.** "
+           "Precipitação diária somada por semana (domingo a sábado, dia local de Recife).",
+           "- **INMET (estação A301 de Recife):** NÃO alimenta o modelo. Usado só como verificação de sanidade "
+           "nos anos em que tem dado (seção abaixo), porque não tem chuva utilizável de 2022 em diante.", "",
            "## Cobertura", "",
            f"- Período: {weekly['week_start'].min().date()} a {weekly['week_start'].max().date()} "
            f"({len(weekly)} semanas).",
@@ -98,7 +112,7 @@ def main() -> None:
         sv = sem_valor.assign(week_start=sem_valor["week_start"].dt.strftime("%Y-%m-%d"))
         out += ["Semanas do painel com nulos:", "", md_table(sv.round(1).fillna("—")), ""]
     out += ["## Estatísticas básicas (série toda)", "", md_table(est), "",
-            "## Validação da chuva (Open-Meteo x INMET)", "", valid_txt, "",
+            "## Verificação de sanidade da chuva (Open-Meteo x INMET A301)", "", valid_txt, "",
             "![clima](clima_qualidade.png)", ""]
     (config.REPORTS_DIR / "clima_qualidade.md").write_text("\n".join(out), encoding="utf-8")
     print(f"clima_semanal: {len(weekly)} semanas, {weekly['week_start'].min().date()} a {weekly['week_start'].max().date()}")

@@ -17,7 +17,7 @@
 
 ## Dados
 - Casos por bairro: CSVs anuais de dengue (2013 a 2025) do Portal de Dados Abertos do Recife (licença ODbL).
-- Clima: InfoDengue (municipal, geocode 2611606). Fonte de chuva ainda pendente (INMET ou APAC).
+- Clima: InfoDengue (municipal, geocode 2611606) para temperatura e umidade; a API não traz chuva. Chuva: Open-Meteo (ERA5) em todo o período 2015 até PANEL_END, fonte única. É reanálise em grade (~25 km), NÃO é medição de estação (no relatório, chamar de "chuva estimada por reanálise"). O INMET A301 (Recife) só serve como verificação de sanidade, porque não tem chuva utilizável de 2022 em diante (2022 e 2023 vazios; 2024 e 2025 sem a estação). Comparação semanal Open-Meteo x INMET, anos usados 2015 a 2021 (341 semanas): Pearson 0,66 e Spearman 0,80 no total; por ano, Pearson de 0,58 (2019) a 0,82 (2017 e 2020). O Open-Meteo soma só ~0,42 da chuva do INMET (subestima o volume), então usar como índice relativo. Ver reports/clima_qualidade.md.
 - Dados sintéticos servem só para testar o pipeline. Nunca usar em resultado, gráfico ou métrica do relatório. Se os nomes de colunas dos CSVs reais forem incertos, pergunte ao Caio em vez de assumir.
 - Contrato do sensor (JSON): station_id, timestamp (UTC ISO com Z), latitude, longitude, temperature_c, relative_humidity, rainfall_mm (mm desde a leitura anterior), battery_voltage. Tópico MQTT: antecedengue/estacoes/<station_id>/leituras. Faixas válidas: temperatura -10 a 60, umidade 0 a 100, chuva >= 0. Leitura inválida é gravada com is_valid = false e não entra no modelo.
 

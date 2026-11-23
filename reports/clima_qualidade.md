@@ -3,8 +3,8 @@
 ## Fontes
 
 - **Temperatura e umidade:** InfoDengue (`alertcity`, geocode 2611606), valores semanais do município. A resposta real da API não traz precipitação.
-- **Chuva:** Open-Meteo Historical Weather API, modelo ERA5 (**reanálise em grade, não é observação de estação**), precipitação diária somada por semana (domingo a sábado, dia local de Recife).
-- **INMET (estação A301 de Recife) foi tentado primeiro** e descartado: arquivos de 2022 e 2023 sem nenhum valor de chuva, 2024 e 2025 sem a estação no zip, 2021 com 14,5% de horas vazias. Usado só para validar.
+- **Chuva (alimenta o modelo, fonte única em todo o período 2015 até PANEL_END):** Open-Meteo Historical Weather API, modelo ERA5. **É reanálise em grade (~25 km), não medição de estação.** Precipitação diária somada por semana (domingo a sábado, dia local de Recife).
+- **INMET (estação A301 de Recife):** NÃO alimenta o modelo. Usado só como verificação de sanidade nos anos em que tem dado (seção abaixo), porque não tem chuva utilizável de 2022 em diante.
 
 ## Cobertura
 
@@ -62,8 +62,23 @@ Semanas do painel com nulos:
 | umid_media | 77.7 | 5.8 | 65.5 | 77.2 | 96.2 |
 | chuva_mm | 17.0 | 17.6 | 0.0 | 11.8 | 160.1 |
 
-## Validação da chuva (Open-Meteo x INMET)
+## Verificação de sanidade da chuva (Open-Meteo x INMET A301)
 
-341 semanas com dados nas duas fontes (2015-01-04 a 2021-10-31): correlação de Pearson **0.66**, Spearman **0.80**; chuva total Open-Meteo / INMET = **0.42**.
+Anos do INMET usados na comparação: **2015, 2016, 2017, 2018, 2019, 2020, 2021** (341 semanas, 2015-01-04 a 2021-10-31). Sem dado de chuva utilizável no INMET: 2022 e 2023 (arquivos vazios), 2024 e 2025 (estação ausente no zip). Em 2021 só entram as semanas com >= 80% das horas medidas.
+
+| ano | semanas comparadas | Pearson | Spearman | chuva Open-Meteo / INMET |
+|---|---|---|---|---|
+| 2015 | 50 | 0.73 | 0.85 | 0.37 |
+| 2016 | 48 | 0.75 | 0.83 | 0.51 |
+| 2017 | 47 | 0.82 | 0.85 | 0.44 |
+| 2018 | 49 | 0.66 | 0.64 | 0.45 |
+| 2019 | 52 | 0.58 | 0.77 | 0.43 |
+| 2020 | 52 | 0.82 | 0.85 | 0.49 |
+| 2021 | 43 | 0.70 | 0.71 | 0.29 |
+| 2022 | 0 | — | — | — |
+| 2023 | 0 | — | — | — |
+| 2024 | 0 | — | — | — |
+| 2025 | 0 | — | — | — |
+| **total** | 341 | 0.66 | 0.80 | 0.42 |
 
 ![clima](clima_qualidade.png)
