@@ -63,6 +63,7 @@ class PredictionsResponse(BaseModel):
     classe: str | None = Field(description="Filtro de classe aplicado.")
     top: int | None = Field(description="Limite aplicado (os N de maior risk_score).")
     predictions: list[PredictionItem]
+    fonte: str | None = Field(None, description="De onde vieram as previsões: postgres (DAG semanal) ou csv (fallback).")
 
 
 class BairrosResponse(BaseModel):

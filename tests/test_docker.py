@@ -40,8 +40,9 @@ def test_servicos_do_compose_e_perfis():
 
 def test_dependencias_esperam_servico_saudavel():
     for servico in COMPOSE["services"].values():
-        for dep in servico.get("depends_on", {}).values():
-            assert dep["condition"] == "service_healthy"
+        for nome, dep in servico.get("depends_on", {}).items():
+            esperado = "service_completed_successfully" if nome == "airflow-init" else "service_healthy"
+            assert dep["condition"] == esperado
 
 
 def test_postgres_e_mlflow_so_no_localhost_e_dados_so_leitura():

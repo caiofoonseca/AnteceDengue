@@ -102,7 +102,7 @@ def predict_latest(model, meta: dict, panel: pd.DataFrame, clima: pd.DataFrame) 
 
 
 def run(output_path: Path = OUTPUT_PATH, model_path: Path = config.MODEL_PATH, meta_path: Path = config.MODEL_META_PATH,
-        use_registry: bool = True) -> pd.DataFrame:
+        use_registry: bool = True, write_db: bool = False) -> pd.DataFrame:
     meta = load_meta(meta_path)
     check_sklearn_version(meta)
     model, origem = load_model(model_path, use_registry)
@@ -113,14 +113,24 @@ def run(output_path: Path = OUTPUT_PATH, model_path: Path = config.MODEL_PATH, m
     print(f"Modelo: {meta['model_name']} (origem: {origem})")
     print(f"Semana base t = {out['week_start'].iloc[0].date()}; previsão para t+1 = {out['target_week'].iloc[0].date()}")
     print(f"{len(out)} bairros gravados em {output_path}")
+    if write_db:
+        from src.db import get_engine, init_db, save_predictions
+
+        engine = get_engine()
+        init_db(engine)
+        n = save_predictions(engine, out)
+        engine.dispose()
+        print(f"{n} previsões gravadas na tabela predictions do banco")
     return out
 
 
 def main(argv=None) -> pd.DataFrame:
     parser = argparse.ArgumentParser(description="Inferência em lote do AnteceDengue")
     parser.add_argument("--no-registry", action="store_true", help="usa só models/best_model.joblib")
+    parser.add_argument("--gravar-banco", action="store_true",
+                        help="grava também as previsões na tabela predictions (DATABASE_URL); o CSV continua sendo gravado")
     args = parser.parse_args(argv)
-    return run(use_registry=not args.no_registry)
+    return run(use_registry=not args.no_registry, write_db=args.gravar_banco)
 
 
 if __name__ == "__main__":

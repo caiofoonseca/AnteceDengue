@@ -13,7 +13,7 @@ from sqlalchemy.engine import Engine
 
 from src import config
 from src.bairros import normalize_name
-from src.db import init_db, normalize_database_url, sensor_weekly
+from src.db import init_db, load_latest_predictions, normalize_database_url, sensor_weekly
 
 log = logging.getLogger("api.repository")
 
@@ -44,6 +44,7 @@ class Repository:
         self.engine = engine if engine is not None else make_engine(database_url or config.DATABASE_URL)
         self._cache: dict[str, tuple[float, pd.DataFrame]] = {}
         self._tables_ready = False
+        self.predictions_source: str | None = None
 
     def _read_csv(self, caminho: Path, chave: str, erro: type[RuntimeError], mensagem: str) -> pd.DataFrame:
         if not caminho.exists():
@@ -64,13 +65,31 @@ class Repository:
         return self._read_csv(self.panel_path, "panel", PanelUnavailable,
                               f"Painel de casos não encontrado em {self.panel_path.name}. Rode scripts/build_panel.py.")
 
+    def _predictions_from_db(self) -> pd.DataFrame | None:
+        """Previsões gravadas no Postgres pelo DAG semanal; None se o banco não responde ou está vazio."""
+        try:
+            if not self._tables_ready:
+                init_db(self.engine)
+                self._tables_ready = True
+            df = load_latest_predictions(self.engine)
+        except Exception as erro:
+            log.warning("previsões no banco indisponíveis (%s); usando o CSV", type(erro).__name__)
+            return None
+        return None if df.empty else df
+
     def predictions(self) -> pd.DataFrame:
+        """Banco primeiro; se não houver previsões lá, o CSV gerado por python -m src.predict_batch."""
+        do_banco = self._predictions_from_db()
+        if do_banco is not None:
+            self.predictions_source = "postgres"
+            return do_banco
+        self.predictions_source = "csv"
         return self._read_csv(self.predictions_path, "predictions", PredictionsUnavailable,
                               f"Arquivo de previsões {self.predictions_path.name} não encontrado. "
                               "Gere-o com: python -m src.predict_batch")
 
     def predictions_available(self) -> bool:
-        return self.predictions_path.exists()
+        return self.predictions_path.exists() or self._predictions_from_db() is not None
 
     def bairros(self) -> list[str]:
         return sorted(self.panel()["bairro"].unique())

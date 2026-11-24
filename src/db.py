@@ -9,8 +9,9 @@ timestamp reconhecível (ts nulo) não entram nessa deduplicação.
 """
 import datetime as dt
 
+import pandas as pd
 from sqlalchemy import (Boolean, Column, Date, DateTime, Float, Integer, MetaData, String, Table, Text,
-                        UniqueConstraint, create_engine)
+                        UniqueConstraint, create_engine, delete, insert, select)
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.engine import Engine
 
@@ -46,6 +47,24 @@ sensor_weekly = Table(
     Column("n_leituras", Integer, nullable=False),
     Column("bateria_min", Float),
 )
+
+predictions = Table(
+    "predictions", metadata,
+    Column("bairro", String(100), primary_key=True),
+    Column("week_start", Date, primary_key=True),
+    Column("target_week", Date, nullable=False),
+    Column("classe_prevista", Integer, nullable=False),
+    Column("rotulo_previsto", String(10), nullable=False),
+    Column("prob_baixo", Float, nullable=False),
+    Column("prob_medio", Float, nullable=False),
+    Column("prob_alto", Float, nullable=False),
+    Column("risk_score", Float, nullable=False),
+    Column("rank", Integer, nullable=False),
+    Column("generated_at", DateTime, nullable=False),
+)
+
+PREDICTION_COLUMNS = ("bairro", "week_start", "target_week", "classe_prevista", "rotulo_previsto", "prob_baixo",
+                      "prob_medio", "prob_alto", "risk_score", "rank")
 
 READING_COLUMNS = ("station_id", "ts", "latitude", "longitude", "temperature_c", "relative_humidity",
                    "rainfall_mm", "battery_voltage", "is_valid", "invalid_reason", "raw_payload")
@@ -88,3 +107,34 @@ def insert_reading(engine: Engine, reading: dict, received_at: dt.datetime | Non
     with engine.begin() as conn:
         resultado = conn.execute(_insert_ignoring_duplicates(engine, valores))
     return resultado.rowcount == 1
+
+
+def save_predictions(engine: Engine, frame: pd.DataFrame, generated_at: dt.datetime | None = None) -> int:
+    """Grava as previsões em lote; reexecutar para a mesma semana base substitui as linhas (idempotente)."""
+    registros = []
+    agora = generated_at or utcnow()
+    for linha in frame[list(PREDICTION_COLUMNS)].to_dict("records"):
+        linha["week_start"] = pd.Timestamp(linha["week_start"]).date()
+        linha["target_week"] = pd.Timestamp(linha["target_week"]).date()
+        for coluna in ("classe_prevista", "rank"):
+            linha[coluna] = int(linha[coluna])
+        for coluna in ("prob_baixo", "prob_medio", "prob_alto", "risk_score"):
+            linha[coluna] = float(linha[coluna])
+        registros.append({**linha, "generated_at": agora})
+    semanas = {r["week_start"] for r in registros}
+    with engine.begin() as conn:
+        conn.execute(delete(predictions).where(predictions.c.week_start.in_(semanas)))
+        if registros:
+            conn.execute(insert(predictions), registros)
+    return len(registros)
+
+
+def load_latest_predictions(engine: Engine) -> pd.DataFrame:
+    """Previsões da semana base mais recente gravada no banco, ordenadas por rank (vazio se não houver)."""
+    with engine.connect() as conn:
+        ultima = conn.execute(select(predictions.c.week_start).order_by(predictions.c.week_start.desc()).limit(1)).scalar()
+        if ultima is None:
+            return pd.DataFrame(columns=list(PREDICTION_COLUMNS))
+        linhas = conn.execute(select(*[predictions.c[c] for c in PREDICTION_COLUMNS]).where(
+            predictions.c.week_start == ultima).order_by(predictions.c["rank"])).mappings().all()
+    return pd.DataFrame([dict(l) for l in linhas], columns=list(PREDICTION_COLUMNS))

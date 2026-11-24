@@ -94,7 +94,8 @@ def create_app(loaded: LoadedModel | None = None, repository: Repository | None 
                            top: int | None = Query(None, ge=1, description="Só os N de maior risco."),
                            classe: Literal["baixo", "medio", "alto"] | None = Query(None, description="Filtra pela classe prevista.")):
         try:
-            df = repo(request).predictions()
+            r = repo(request)
+            df = r.predictions()
         except PredictionsUnavailable as erro:
             raise HTTPException(503, str(erro))
         if classe is not None:
@@ -105,7 +106,7 @@ def create_app(loaded: LoadedModel | None = None, repository: Repository | None 
         itens = [PredictionItem(**linha) for linha in df.to_dict("records")]
         return PredictionsResponse(week_start=itens[0].week_start if itens else None,
                                    target_week=itens[0].target_week if itens else None, total=len(itens),
-                                   classe=classe, top=top, predictions=itens)
+                                   classe=classe, top=top, predictions=itens, fonte=r.predictions_source)
 
     @app.get("/bairros", response_model=BairrosResponse, tags=["Bairros"], summary="Lista de bairros")
     def bairros(request: Request):

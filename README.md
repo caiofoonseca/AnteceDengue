@@ -121,3 +121,25 @@ Pré-requisito: `models/` e `data/processed/` gerados (a API os monta somente le
 - Postgres do compose em `127.0.0.1:5433` (variável `POSTGRES_HOST_PORT`); MLflow em http://localhost:5000.
 - Logs: `docker compose logs -f ingestor`. Parar: `docker compose down` (mantém os dados). Apagar também os volumes (banco, MLflow, Mosquitto): `docker compose down -v`.
 - O Mosquitto aceita conexões anônimas (só para desenvolvimento). A pilha usa cerca de 0,8 GiB no total; nenhum serviço passa de 1 GiB.
+
+## Airflow (perfil `airflow`) e script de demonstração
+O Airflow fica fora da pilha base. Defina no `.env` `AIRFLOW_ADMIN_USER`, `AIRFLOW_ADMIN_PASSWORD`, `AIRFLOW_FERNET_KEY` e `AIRFLOW_SECRET_KEY` (veja `.env.example`) e rode:
+```
+docker compose --profile airflow up --build -d
+```
+A interface abre em http://localhost:8080 (ou na porta de `AIRFLOW_HOST_PORT`). DAGs, em `dags/`:
+
+| DAG | Quando | O que faz |
+|---|---|---|
+| `antecedengue_dados` | segunda 05:00 | ingestão (pula o download se os CSVs existem; `refresh=true` baixa de novo), painel, clima, validação de qualidade, publicação em `data/processed` |
+| `antecedengue_semanal` | segunda 06:00 | agrega o sensor, inferência em lote (CSV e tabela `predictions` no Postgres) e run de monitoramento no MLflow |
+| `antecedengue_treino` | manual | experimentos 01, 02 e 03 (nunca `--final`); parâmetro `n_iter` |
+
+Testar um DAG sem esperar o agendamento: `docker compose --profile airflow exec airflow-scheduler airflow dags test antecedengue_semanal 2026-11-24` (o de treino aceita `--conf '{"n_iter": 2}'`). Testes dos DAGs dentro do container: `docker compose --profile airflow exec -w /opt/airflow/project airflow-scheduler python -m pytest tests/test_dags.py`. Só o download (`refresh=true` ou arquivo faltando) precisa de internet.
+
+**Demonstração em um comando** (sobe a pilha, semeia o MLflow se preciso, reinicia a API, liga o simulador com `SENSOR_FONTE=simulado` e imprime as URLs):
+```
+powershell -ExecutionPolicy Bypass -File scripts\demo.ps1 [-Airflow]
+scripts/demo.sh [--airflow]
+```
+Para derrubar: `scripts\demo.ps1 -Down` (mantém os dados) ou `-Down -Volumes` (apaga os volumes); no bash, `scripts/demo.sh --down [--volumes]`.
