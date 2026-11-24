@@ -237,3 +237,12 @@ mlflow.db
 mlflow.db-journal
 
 .claude/
+
+# Embarcados e segredos
+secrets.h
+**/secrets.h
+.pio/
+.pioenvs/
+.env.*
+!.env.example
+*.bak
