@@ -18,6 +18,7 @@ COPY --chown=app:app config ./config
 COPY --chown=app:app src ./src
 COPY --chown=app:app api ./api
 COPY --chown=app:app app ./app
+COPY --chown=app:app .streamlit ./.streamlit
 COPY --chown=app:app scripts ./scripts
 
 USER app

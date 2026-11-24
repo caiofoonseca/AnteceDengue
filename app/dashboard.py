@@ -14,7 +14,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from app import data
+from app import data, ui
 from app.api_client import ApiClient, ApiError, ApiUnavailable, api_url
 
 st.set_page_config(page_title="AnteceDengue — índice de risco de dengue", page_icon="🦟", layout="wide")
@@ -30,7 +30,7 @@ def get(path: str, **params):
 
 
 def show_api_down(erro: ApiUnavailable) -> None:
-    st.title("AnteceDengue — índice de risco de dengue")
+    ui.render(ui.hero(simulated=ui.simulated_source()))
     st.error(f"Não consegui falar com a API em **{erro.base_url}** ({erro.motivo}).")
     st.markdown(
         "Suba a API com `uvicorn api.main:app` ou ajuste a variável de ambiente `API_URL` com o endereço certo, "
@@ -201,19 +201,25 @@ def tab_modelo(info: dict) -> None:
 
 
 def main() -> None:
-    st.title("AnteceDengue — índice de risco de dengue por bairro (Recife)")
+    ui.load_css()
     try:
         get("/health")
         info = get("/model")
     except ApiUnavailable as erro:
         show_api_down(erro)
         return
+    aviso = None
     try:
         pred = get("/predictions/latest")
         frame = data.predictions_frame(pred)
     except ApiError as erro:
-        pred, frame = None, data.predictions_frame({"predictions": []})
-        st.warning(erro.detail)
+        pred, frame, aviso = None, data.predictions_frame({"predictions": []}), erro.detail
+    semanas = (pred["week_start"], pred["target_week"]) if pred else (None, None)
+    ui.render(ui.hero(*semanas, simulated=ui.simulated_source()))
+    if aviso:
+        st.warning(aviso)
+    if pred and not frame.empty:
+        ui.render(ui.summary_cards(frame, *semanas))
     abas = st.tabs(["Mapa de risco", "Ranking", "Bairro", "Sensor", "Modelo"])
     try:
         with abas[0]:
