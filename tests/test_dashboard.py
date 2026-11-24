@@ -210,10 +210,10 @@ def test_dashboard_caminho_feliz(monkeypatch):
     avisos = " ".join(i.value for i in at.info)
     assert "17/08/2025" in avisos and "24/08/2025" in avisos and "não é monitoramento em tempo real" in avisos
     assert len(at.get("plotly_chart")) >= 5
-    metricas = {m.label: m.value for m in at.metric}
-    assert metricas["Modelo"] == "RandomForest" and metricas["Versão no Registry"] == "1 (champion)"
     html = " ".join(e.value for e in at.markdown if isinstance(e.value, str))
     assert "Bairros em risco Alto" in html and "Maior índice de risco" in html and "Top 5 bairros" in html
+    assert "RandomForest" in html and "1 (champion)" in html and "Versão no Registry" in html
+    assert "Como ler" in html and "Estado das estações" in html
     for trecho in re.finditer("probabilidade de surto", html.lower()):
         assert "não" in html.lower()[max(0, trecho.start() - 8):trecho.start()]
 
@@ -223,7 +223,7 @@ def test_dashboard_interacoes(monkeypatch):
     at = rodar()
     at.selectbox(key="bairro_sel").select(BAIRROS[10]).run()
     assert not at.exception
-    assert any(m.label == "Posição no ranking" and m.value.startswith("11º") for m in at.metric)
+    assert "11º de 94" in " ".join(e.value for e in at.markdown if isinstance(e.value, str))
     at.multiselect(key="rank_classes").set_value(["Alto"]).run()
     assert not at.exception
     at.text_input(key="rank_busca").set_value("boa vi").run()
@@ -322,3 +322,19 @@ def test_busca_por_bairro_ignora_acentos_e_caixa():
     assert list(data.filter_by_name(tabela, "sao jose")["bairro"]) == ["SÃO JOSÉ"]
     assert len(data.filter_by_name(tabela, "  ")) == 3 and len(data.filter_by_name(tabela, None)) == 3
     assert data.filter_by_name(tabela, "zzz").empty
+
+
+def test_tabelas_de_exibicao_das_outras_abas():
+    from app import ui
+
+    longo = data.comparison_long(MODEL_INFO)
+    assert set(longo["conjunto"]) == {"Validação", "Teste"} and len(longo) == 8
+    assert longo[(longo["modelo"] == "Persistência") & (longo["conjunto"] == "Teste")
+                 & (longo["métrica"] == "F1-macro")]["valor"].iloc[0] == 0.570
+    sem_pers = json.loads(json.dumps(MODEL_INFO))
+    del sem_pers["validation_metrics"]["persistencia_f1_macro"]
+    assert len(data.comparison_long(sem_pers)) == 7
+    visao = ui.comparison_table_view(data.model_comparison_table(MODEL_INFO))
+    assert visao.loc[0, "RandomForest (teste)"] == "0,611" and visao.loc[0, "métrica"] == "F1-macro"
+    estado = ui.sensor_status_view(data.sensor_status(data.sensor_frame(SENSOR_ITEMS)))
+    assert list(estado.columns)[0] == "Bairro" and estado.loc[0, "Bateria mínima (V)"] == "3,70"

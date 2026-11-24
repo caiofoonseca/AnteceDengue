@@ -29,6 +29,10 @@ def get(path: str, **params):
     return fetch(api_url(), path, tuple(sorted((k, v) for k, v in params.items() if v is not None)))
 
 
+def show_chart(figura) -> None:
+    st.plotly_chart(figura, width="stretch", config={"displayModeBar": False, "scrollZoom": False})
+
+
 def show_api_down(erro: ApiUnavailable) -> None:
     ui.render(ui.hero(simulated=ui.simulated_source()))
     st.error(f"Não consegui falar com a API em **{erro.base_url}** ({erro.motivo}).")
@@ -86,7 +90,7 @@ def tab_map(frame: pd.DataFrame, pred: dict) -> None:
         mapa, topo = st.columns([3, 1], gap="medium")
         with mapa:
             with st.container(border=True, key="card_mapa"):
-                st.plotly_chart(risk_map(frame, geojson), width="stretch")
+                show_chart(risk_map(frame, geojson))
         with topo:
             with st.container(border=True, key="card_top5"):
                 ui.render(ui.top_panel(frame, 5))
@@ -96,7 +100,7 @@ def tab_map(frame: pd.DataFrame, pred: dict) -> None:
         st.warning("Os limites geográficos dos bairros (app/assets/bairros.geojson) não estão disponíveis ou não "
                    "cobrem todos os bairros. Mostrando o ranking em barras no lugar do mapa.")
         with st.container(border=True, key="card_mapa"):
-            st.plotly_chart(ranking_bars(data.ranking_table(frame, len(frame)), altura=1500), width="stretch")
+            show_chart(ranking_bars(data.ranking_table(frame, len(frame)), altura=1500))
     with st.container(border=True, key="card_tabela10"):
         ui.render(ui.card_title("10 bairros de maior índice", "índice de risco de 0 a 100, não calibrado"))
         mais_altos = ui.ranking_view(data.ranking_table(frame, 10))
@@ -126,9 +130,30 @@ def tab_ranking(frame: pd.DataFrame, pred: dict) -> None:
                          column_config=ui.RANKING_COLUMNS)
     with direita:
         with st.container(border=True, key="card_ranking_grafico"):
-            st.plotly_chart(ranking_bars(tabela, titulo="Índice de risco por bairro"), width="stretch")
+            show_chart(ranking_bars(tabela, titulo="Índice de risco por bairro"))
     st.caption("O índice (50 x prob. médio + 100 x prob. alto) ordena os bairros entre si; não é probabilidade de "
                "surto e não é calibrado.")
+
+
+def probability_chart(previsao: dict):
+    probs = data.probabilities_frame(previsao).assign(rotulo=lambda d: d["probabilidade (%)"].map(ui.fmt_num))
+    figura = px.bar(probs, x="probabilidade (%)", y="classe", orientation="h", text="rotulo", color="probabilidade (%)",
+                    color_continuous_scale=ui.RISK_SCALE, range_color=(0, 100),
+                    labels={"probabilidade (%)": "Probabilidade estimada (%)", "classe": "Classe"})
+    figura.update_traces(texttemplate="%{text}%", textposition="outside", cliponaxis=False, marker_line_width=0,
+                         hovertemplate="%{y}: %{text}%<extra></extra>")
+    figura.update_layout(coloraxis_showscale=False, xaxis_range=[0, 115])
+    figura.update_yaxes(categoryorder="array", categoryarray=["Alto", "Médio", "Baixo"], showgrid=False)
+    return ui.style_figure(figura, height=260, titulo="Probabilidade estimada por classe")
+
+
+def cases_chart(casos: pd.DataFrame):
+    figura = px.bar(casos, x="semana", y="casos",
+                    labels={"semana": "Semana (início no domingo)", "casos": "Casos confirmados por semana"})
+    figura.update_traces(marker_color="#c2541a", marker_line_width=0,
+                         hovertemplate="Semana de %{x|%d/%m/%Y}<br>%{y} casos<extra></extra>")
+    figura.update_xaxes(showgrid=False, tickformat="%d/%m")
+    return ui.style_figure(figura, height=300, titulo="Casos confirmados (últimas 26 semanas)")
 
 
 def tab_bairro(pred: dict) -> None:
@@ -136,7 +161,7 @@ def tab_bairro(pred: dict) -> None:
     weeks_banner(pred)
     lista = get("/bairros")["bairros"]
     padrao = lista.index("BOA VIAGEM") if "BOA VIAGEM" in lista else 0
-    escolhido = st.selectbox("Bairro", lista, index=padrao, key="bairro_sel")
+    escolhido = st.selectbox("Escolha o bairro", lista, index=padrao, key="bairro_sel")
     try:
         detalhe = get(f"/bairros/{escolhido}")
     except ApiError as erro:
@@ -144,34 +169,47 @@ def tab_bairro(pred: dict) -> None:
         return
     previsao = detalhe["previsao"]
     if previsao:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Classe prevista", data.CLASS_TEXT[previsao["rotulo_previsto"]])
-        c2.metric("Índice de risco (0–100)", f"{previsao['risk_score']:.1f}")
-        c3.metric("Posição no ranking", f"{previsao['rank']}º de {len(lista)}")
-        probs = data.probabilities_frame(previsao)
-        figura = px.bar(probs, x="probabilidade (%)", y="classe", orientation="h", text="probabilidade (%)",
-                        color="probabilidade (%)", color_continuous_scale=data.COLOR_SCALE, range_color=(0, 100),
-                        title="Probabilidade estimada por classe (semana prevista)", height=260)
-        figura.update_traces(texttemplate="%{text:.1f}%")
-        figura.update_layout(coloraxis_showscale=False, xaxis_range=[0, 100])
-        st.plotly_chart(figura, width="stretch")
-        st.caption("Atenção: as probabilidades do modelo não são calibradas. Use-as como ordem de grandeza, não "
-                   "como chance real.")
+        classe = data.CLASS_TEXT[previsao["rotulo_previsto"]]
+        ui.render(ui.kpi_grid([
+            ui.kpi_card("Classe prevista", ui.class_label(classe), escolhido, ui.CLASS_KEY[classe], texto=True),
+            ui.kpi_card("Índice de risco", ui.fmt_num(previsao["risk_score"]), "escala de 0 a 100, não calibrada"),
+            ui.kpi_card("Posição no ranking", f"{previsao['rank']}º de {len(lista)}", "1º = maior índice", texto=True)]))
+        esquerda, direita = st.columns([2, 3], gap="medium")
+        with esquerda:
+            with st.container(border=True, key="card_bairro_prob"):
+                show_chart(probability_chart(previsao))
+                st.caption("Atenção: as probabilidades do modelo não são calibradas. Use-as como ordem de grandeza, "
+                           "não como chance real.")
+        casos = data.cases_frame(detalhe)
+        with direita:
+            with st.container(border=True, key="card_bairro_casos"):
+                if casos.empty:
+                    st.info("Sem casos registrados para este bairro nas últimas semanas.")
+                else:
+                    show_chart(cases_chart(casos))
+                    st.caption("Casos do painel do portal de dados abertos (chegam com atraso). Os casos recentes "
+                               "alimentam a previsão.")
     else:
         st.warning(detalhe.get("nota") or "Sem previsão para este bairro.")
-    casos = data.cases_frame(detalhe)
-    if not casos.empty:
-        figura = px.bar(casos, x="semana", y="casos", title="Casos confirmados por semana (últimas 26 semanas)",
-                        labels={"semana": "Semana (início no domingo)", "casos": "Casos confirmados por semana"},
-                        height=340)
-        figura.update_traces(marker_color="#b45309")
-        st.plotly_chart(figura, width="stretch")
-        st.caption("Casos do painel do portal de dados abertos (chegam com atraso). Os casos recentes alimentam a previsão.")
     sensor = data.sensor_frame(detalhe["sensor_semanal"])
     if not sensor.empty:
-        st.markdown("**Microclima medido pelo sensor neste bairro** (não alimenta o modelo)")
-        st.dataframe(sensor.drop(columns="bairro").assign(semana=sensor["semana"].dt.strftime("%d/%m/%Y")),
-                     hide_index=True, width="stretch")
+        with st.container(border=True, key="card_bairro_sensor"):
+            ui.render(ui.card_title("Microclima medido pelo sensor neste bairro", "não alimenta o modelo"))
+            st.dataframe(sensor.drop(columns="bairro").assign(semana=sensor["semana"].dt.strftime("%d/%m/%Y")),
+                         hide_index=True, width="stretch")
+
+
+def sensor_chart(recorte: pd.DataFrame, coluna: str, titulo: str, barras: bool = False):
+    construir = px.bar if barras else px.line
+    figura = construir(recorte, x="semana", y=coluna, color="bairro", color_discrete_sequence=ui.SERIES_COLORS,
+                       labels={"semana": "Semana (início no domingo)", coluna: coluna.capitalize(), "bairro": "Bairro"})
+    if barras:
+        figura.update_layout(barmode="group")
+        figura.update_traces(marker_line_width=0)
+    else:
+        figura.update_traces(mode="lines+markers", line={"width": 2.5}, marker={"size": 7})
+    figura.update_xaxes(showgrid=False, tickformat="%d/%m")
+    return ui.style_figure(figura, height=320, titulo=titulo)
 
 
 def tab_sensor() -> None:
@@ -192,35 +230,71 @@ def tab_sensor() -> None:
         st.info("As estações ainda não enviaram leituras. Quando o ingestor MQTT gravar leituras válidas e a "
                 "agregação semanal rodar, as séries aparecem aqui.")
         return
-    st.markdown("**Estado das estações (por bairro)**")
-    st.dataframe(data.sensor_status(frame), hide_index=True, width="stretch")
+    estado = data.sensor_status(frame)
+    ultima = data.format_date(frame["semana"].max())
+    ui.render(ui.kpi_grid([
+        ui.kpi_card("Bairros com leituras", str(len(estado)), "estações com dados semanais"),
+        ui.kpi_card("Última semana com dados", ultima, "início da semana (domingo)", texto=True),
+        ui.kpi_card("Bateria mínima", f"{ui.fmt_num(estado['bateria mínima (V)'].min(), 2)} V",
+                    "menor tensão registrada")]))
+    with st.container(border=True, key="card_sensor_estado"):
+        ui.render(ui.card_title("Estado das estações", "um resumo por bairro"))
+        st.dataframe(ui.sensor_status_view(estado), hide_index=True, width="stretch")
     bairros = st.multiselect("Bairros", sorted(frame["bairro"].unique()), default=sorted(frame["bairro"].unique()),
                              key="sensor_bairros")
     recorte = frame[frame["bairro"].isin(bairros)]
-    for coluna, titulo in (("temperatura (°C)", "Temperatura média semanal"), ("umidade (%)", "Umidade relativa média semanal"),
-                           ("chuva (mm)", "Chuva total semanal")):
-        figura = (px.bar if coluna.startswith("chuva") else px.line)(
-            recorte, x="semana", y=coluna, color="bairro", title=titulo,
-            labels={"semana": "Semana (início no domingo)", coluna: coluna.capitalize()}, height=300)
-        st.plotly_chart(figura, width="stretch")
+    temp, umid = st.columns(2, gap="medium")
+    with temp:
+        with st.container(border=True, key="card_sensor_temp"):
+            show_chart(sensor_chart(recorte, "temperatura (°C)", "Temperatura média semanal (°C)"))
+    with umid:
+        with st.container(border=True, key="card_sensor_umid"):
+            show_chart(sensor_chart(recorte, "umidade (%)", "Umidade relativa média semanal (%)"))
+    with st.container(border=True, key="card_sensor_chuva"):
+        show_chart(sensor_chart(recorte, "chuva (mm)", "Chuva total semanal (mm)", barras=True))
+
+
+def comparison_chart(info: dict):
+    longo = data.comparison_long(info)
+    figura = px.bar(longo, x="conjunto", y="valor", color="modelo", facet_col="métrica", barmode="group",
+                    color_discrete_map=ui.MODEL_COLORS, text=longo["valor"].map(lambda v: ui.fmt_num(v, 3)),
+                    labels={"valor": "Valor (0 a 1)", "conjunto": "", "modelo": "Modelo"})
+    figura.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0)
+    figura.update_yaxes(range=[0, 1])
+    figura.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    ui.style_figure(figura, height=360, titulo="RandomForest e persistência")
+    figura.update_layout(legend={"orientation": "h", "y": -0.12, "x": 0.5, "xanchor": "center", "yanchor": "top"})
+    return figura
 
 
 def tab_modelo(info: dict) -> None:
     st.subheader("Modelo")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Modelo", info["name"])
-    c2.metric("Versão no Registry", f"{info['version']} ({info['alias']})" if info["version"] else "arquivo local")
-    c3.metric("Features", len(info["features"]))
+    ui.render(ui.kpi_grid([
+        ui.kpi_card("Modelo", info["name"], "classificador de risco", texto=True),
+        ui.kpi_card("Versão no Registry", f"{info['version']} ({info['alias']})" if info["version"] else "arquivo local",
+                    "MLflow Model Registry", texto=True),
+        ui.kpi_card("Features", str(len(info["features"])), "só passado e presente")]))
     periodo = info["train_period"]
-    st.write(f"Treino (treino + validação): {data.format_date(periodo['inicio'])} a {data.format_date(periodo['fim'])}. "
-             f"Limiares de classe (casos por semana no bairro): baixo ≤ {info['thresholds'][0]:g}, médio ≤ "
-             f"{info['thresholds'][1]:g}, alto acima disso. scikit-learn {info['sklearn_version_treino']}.")
-    with st.expander("Lista de features"):
-        st.write(", ".join(info["features"]))
-    st.markdown("**RandomForest versus persistência** (persistência = repetir a classe da semana atual)")
-    st.dataframe(data.model_comparison_table(info), hide_index=True, width="stretch")
-    st.write(data.difference_sentence(info))
-    st.caption("Validação e teste têm distribuições de classe diferentes e não são comparáveis entre si.")
+    with st.container(border=True, key="card_modelo_treino"):
+        ui.render(ui.card_title("Como foi treinado"))
+        st.write(f"Treino (treino + validação): {data.format_date(periodo['inicio'])} a {data.format_date(periodo['fim'])}. "
+                 f"Limiares de classe (casos por semana no bairro): baixo ≤ {info['thresholds'][0]:g}, médio ≤ "
+                 f"{info['thresholds'][1]:g}, alto acima disso. scikit-learn {info['sklearn_version_treino']}.")
+        with st.expander("Lista de features"):
+            st.write(", ".join(info["features"]))
+    esquerda, direita = st.columns([3, 2], gap="medium")
+    with esquerda:
+        with st.container(border=True, key="card_modelo_grafico"):
+            show_chart(comparison_chart(info))
+            st.caption("Persistência = repetir a classe da semana atual. Validação e teste têm distribuições de classe "
+                       "diferentes e não são comparáveis entre si.")
+    with direita:
+        with st.container(border=True, key="card_modelo_leitura"):
+            ui.render(ui.card_title("Como ler", "o modelo supera a persistência?"))
+            st.write(data.difference_sentence(info))
+    with st.container(border=True, key="card_modelo_tabela"):
+        ui.render(ui.card_title("RandomForest versus persistência", "validação e teste, lado a lado"))
+        st.dataframe(ui.comparison_table_view(data.model_comparison_table(info)), hide_index=True, width="stretch")
     st.warning("**Limitações**\n\n" + "\n".join(f"- {t}" for t in data.LIMITATIONS))
 
 

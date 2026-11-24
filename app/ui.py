@@ -132,9 +132,9 @@ def style_figure(fig, height: int | None = None, titulo: str | None = None):
     """Estilo comum dos gráficos: fundo transparente, grades suaves, sem bordas pesadas, fonte do sistema."""
     fig.update_layout(
         font={"family": FONT_STACK, "size": 14, "color": INK}, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        margin={"l": 8, "r": 16, "t": 48 if titulo else 16, "b": 8}, hoverlabel={"bgcolor": "#ffffff", "font_size": 14,
+        margin={"l": 8, "r": 16, "t": 56 if titulo else 16, "b": 8}, hoverlabel={"bgcolor": "#ffffff", "font_size": 14,
                                                                                   "font_family": FONT_STACK},
-        legend={"orientation": "h", "y": -0.2, "title": None})
+        legend={"orientation": "h", "y": 1.02, "x": 1, "xanchor": "right", "yanchor": "bottom", "title": None})
     if titulo:
         fig.update_layout(title={"text": titulo, "x": 0, "font": {"size": 16, "color": INK}})
     if height:
@@ -167,3 +167,21 @@ RANKING_COLUMNS = {
     "Índice (0 a 100)": st.column_config.TextColumn("Índice", width="small"),
     "Barra": st.column_config.ProgressColumn("Escala", min_value=0, max_value=100, format=" ", width="small"),
 }
+
+
+SERIES_COLORS = ["#0f766e", "#b4421a", "#5b6770", "#c58a1b", "#3b6ea5", "#7a4d00"]
+MODEL_COLORS = {"RandomForest": "#0f766e", "Persistência": "#a3adb5"}
+
+
+def sensor_status_view(estado: pd.DataFrame) -> pd.DataFrame:
+    """Tabela de estado das estações com cabeçalhos em português e a tensão com vírgula."""
+    return pd.DataFrame({
+        "Bairro": estado["bairro"], "Última semana": estado["última semana"],
+        "Leituras na última semana": estado["leituras na última semana"],
+        "Semanas com dados": estado["semanas com dados"],
+        "Bateria mínima (V)": estado["bateria mínima (V)"].map(lambda v: fmt_num(v, 2))})
+
+
+def comparison_table_view(tabela: pd.DataFrame) -> pd.DataFrame:
+    """Tabela de métricas com vírgula decimal (os valores já vêm formatados como texto com ponto)."""
+    return tabela.apply(lambda col: col.map(lambda v: str(v).replace(".", ",")) if col.name != "métrica" else col)

@@ -180,3 +180,16 @@ def filter_by_name(table: pd.DataFrame, query: str | None) -> pd.DataFrame:
         return table
     alvo = normalize_text(query)
     return table[table["bairro"].map(normalize_text).str.contains(alvo, regex=False)].reset_index(drop=True)
+
+
+def comparison_long(info: dict) -> pd.DataFrame:
+    """RandomForest x persistência em formato longo (para o gráfico): métrica, conjunto, modelo, valor."""
+    linhas = []
+    for conjunto, chave in (("Validação", "validation_metrics"), ("Teste", "test_metrics")):
+        metricas = info[chave]
+        for nome, campo, campo_pers in (("F1-macro", "f1_macro", "persistencia_f1_macro"),
+                                        ("Recall da classe alto", "recall_alto", "persistencia_recall_alto")):
+            for modelo, valor in (("RandomForest", metricas.get(campo)), ("Persistência", metricas.get(campo_pers))):
+                if valor is not None:
+                    linhas.append({"métrica": nome, "conjunto": conjunto, "modelo": modelo, "valor": float(valor)})
+    return pd.DataFrame(linhas, columns=["métrica", "conjunto", "modelo", "valor"])
