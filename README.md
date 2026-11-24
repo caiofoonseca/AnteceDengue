@@ -20,6 +20,12 @@ copy .env.example .env
 pytest
 ```
 
+## Arquivos que já vêm no repositório
+
+Para o clone rodar sem baixar dados nem retreinar, o repositório versiona: `models/best_model.joblib` (modelo final, ~45 MB), `models/model_meta.json`, `data/processed/panel.csv`, `data/processed/clima_semanal.csv` e `data/processed/predictions_latest.csv`. Ficam de fora (`.gitignore`): `data/raw/`, `data/processed/manifest.json`, cópias `.bak`, `.env`, `mlflow.db` e `mlruns/`.
+
+O modelo versionado é o **modelo final**: foi reajustado em treino + validação e o conjunto de teste foi avaliado uma única vez. Por isso `python -m src.train --final` **não pode ser repetido**: o `reports/teste_final.json` trava a reavaliação (a guarda existe para o modelo não ser ajustado olhando o teste; `--force-reeval` invalida a conclusão). Para regenerar os dados brutos use os scripts de `docs/DADOS.md`; os experimentos 01 a 03 podem ser refeitos.
+
 ## Experimentos de ML (MLflow)
 
 Pré-requisito: `data/processed/panel.csv` e `data/processed/clima_semanal.csv` (ver `docs/DADOS.md`: `python scripts/build_panel.py` e `python scripts/build_clima.py`).

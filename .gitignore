@@ -246,3 +246,9 @@ secrets.h
 .env.*
 !.env.example
 *.bak
+
+# Artefatos versionados para o clone rodar (modelo final e dados processados)
+!models/best_model.joblib
+!data/processed/panel.csv
+!data/processed/clima_semanal.csv
+!data/processed/predictions_latest.csv
