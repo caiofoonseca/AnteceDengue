@@ -14,10 +14,10 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from app import data, ui
+from app import auth, data, ui
 from app.api_client import ApiClient, ApiError, ApiUnavailable, api_url
 
-st.set_page_config(page_title="AnteceDengue — índice de risco de dengue", page_icon="🦟", layout="wide")
+st.set_page_config(page_title="AnteceDengue — índice de risco de dengue", page_icon=str(ui.LOGO_PATH), layout="wide")
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -302,6 +302,7 @@ def tab_modelo(info: dict) -> None:
 
 def main() -> None:
     ui.load_css()
+    usuario = auth.require_login()
     try:
         get("/health")
         info = get("/model")
@@ -316,6 +317,7 @@ def main() -> None:
         pred, frame, aviso = None, data.predictions_frame({"predictions": []}), erro.detail
     semanas = (pred["week_start"], pred["target_week"]) if pred else (None, None)
     ui.render(ui.hero(*semanas, simulated=ui.simulated_source()))
+    auth.session_bar(usuario)
     if aviso:
         st.warning(aviso)
     if pred and not frame.empty:

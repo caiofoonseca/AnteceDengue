@@ -14,11 +14,24 @@ from app import data
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 CSS_PATH = ASSETS / "style.css"
+LOGO_PATH = ASSETS / "logo.svg"
 TAGLINE = "Onde o risco de dengue deve estar na próxima semana, bairro a bairro, no Recife"
 
 
 def load_css(path: Path = CSS_PATH) -> None:
     st.markdown(f"<style>{Path(path).read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+
+
+def logo_mark(tamanho: int = 52) -> str:
+    """Logo (gota com tendência de alta e ondas de alerta) como SVG embutido, sem arquivo externo."""
+    svg = LOGO_PATH.read_text(encoding="utf-8").strip().replace(chr(10), "")
+    svg = svg.replace("<svg ", f'<svg width="{int(tamanho)}" height="{int(tamanho)}" ', 1)
+    return f'<span class="logo-mark">{svg}</span>'
+
+
+def wordmark(claro: bool = False) -> str:
+    cor = " wordmark-light" if claro else ""
+    return f'<span class="wordmark{cor}">Antece<strong>Dengue</strong></span>'
 
 
 def render(fragment: str) -> None:
@@ -49,8 +62,8 @@ def hero(week_start=None, target_week=None, simulated: bool = False) -> str:
         selos.append(badge(f"Semana base: {data.format_date(week_start)}", "neutral"))
     if simulated:
         selos.append(badge("Dados simulados", "warn"))
-    return ('<header class="hero"><div class="hero-brand"><div class="hero-logo" aria-hidden="true">A</div>'
-            f'<div><div class="hero-title">AnteceDengue</div><div class="hero-tagline">{esc(TAGLINE)}</div></div></div>'
+    return ('<header class="hero"><div class="hero-brand">' + logo_mark(60) +
+            f'<div><div class="hero-title">{wordmark(True)}</div><div class="hero-tagline">{esc(TAGLINE)}</div></div></div>'
             f'<div class="hero-badges">{"".join(selos)}</div></header>')
 
 
@@ -194,6 +207,7 @@ def api_docs_url() -> str:
 
 def footer() -> str:
     return ('<div class="site-footer" role="contentinfo">'
+            f'<div class="footer-brand">{logo_mark(24)}{wordmark()}<span>Projeto G15 · CESAR School</span></div>'
             '<p><strong>Fontes dos dados.</strong> Casos: Portal de Dados Abertos do Recife (licença ODbL). '
             'Temperatura e umidade: InfoDengue. Chuva: Open-Meteo, estimada por reanálise (ERA5), não é medição de estação.</p>'
             '<p><strong>Aviso.</strong> O índice de risco é um índice de ordenação, não probabilidade de surto: serve para '

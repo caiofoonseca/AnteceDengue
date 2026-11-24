@@ -119,3 +119,9 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Monitoramento: um run por execução no experimento `04-monitoramento-semanal` (bairros, distribuição das classes previstas, semana base). Não avalia o modelo.
 - Os relatórios gerados pelos DAGs ficam no volume `airflow-reports`, não na pasta `reports/` do repositório. Portas: Airflow em `127.0.0.1:${AIRFLOW_HOST_PORT:-8080}` (nesta máquina o 8080 do host é de outro serviço do Windows, então o `.env` usa 8081).
 - Arquivos `.sh` e `.conf` têm fim de linha LF (`.gitattributes`), senão quebram dentro dos containers.
+
+## Decisões do dashboard: identidade e login
+- Marca: logo SVG próprio (`app/assets/logo.svg`, gota com tendência de alta e ondas de alerta) embutido no HTML; cabeçalho em verde-azulado profundo com o nome "AnteceDengue". Sem fontes nem imagens externas.
+- Login (`app/auth.py`): usuário e senha só do ambiente (`DASHBOARD_USER`, `DASHBOARD_PASSWORD`, no `.env`). Sem credenciais válidas, ou com a senha de exemplo, o acesso fica fechado (nunca aberto). Comparação em tempo constante e bloqueio de 30 s após 5 falhas por sessão. Protege só a interface; a API continua aberta na porta 8000.
+- `.gitignore` tem a seção "# Embarcados e segredos" (secrets.h, .pio/, .env.*, *.bak); `.env.example` continua versionado.
+

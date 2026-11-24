@@ -100,7 +100,7 @@ O dashboard consome só a API. Em dois terminais, com o ambiente virtual ativo:
 uvicorn api.main:app --port 8000
 streamlit run app/dashboard.py
 ```
-Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`real` por padrão; com `simulado` ou `teste` a aba Sensor avisa que os dados não são de estações reais). Se a API estiver fora do ar, o dashboard mostra o endereço tentado.
+Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`real` por padrão; com `simulado` ou `teste` a aba Sensor avisa que os dados não são de estações reais). Se a API estiver fora do ar, o dashboard mostra o endereço tentado. O acesso exige login: defina `DASHBOARD_USER` e `DASHBOARD_PASSWORD` no `.env` (sem esses valores, ou com a senha de exemplo, o acesso fica fechado). O login protege só a interface do dashboard; a API (porta 8000) tem as regras dela. A identidade visual (logo em `app/assets/logo.svg`, tema em `.streamlit/config.toml` e `app/assets/style.css`) não usa fontes nem imagens externas.
 
 Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana base e a semana prevista no topo de cada aba; não é monitoramento em tempo real nem diagnóstico. O mapa usa os limites oficiais dos bairros (`app/assets/bairros.geojson`, ver `docs/DADOS.md`) e os tiles do mapa precisam de internet. Para refazer o GeoJSON: `python scripts/build_bairros_geojson.py`. Para gravar a persistência da validação em `models/model_meta.json` sem retreinar: `python scripts/patch_meta_persistencia.py` (novas execuções de `src.final` já gravam).
 

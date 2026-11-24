@@ -160,6 +160,8 @@ services:
       API_URL: http://api:8000
       API_PUBLIC_URL: http://localhost:8000
       SENSOR_FONTE: ${SENSOR_FONTE:-real}
+      DASHBOARD_USER: ${DASHBOARD_USER:-}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
     ports:
       - "8501:8501"
     depends_on:

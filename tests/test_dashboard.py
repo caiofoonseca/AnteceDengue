@@ -8,7 +8,7 @@ import requests
 from streamlit.testing.v1 import AppTest
 
 import app.api_client as api_client
-from app import data
+from app import data, ui
 from app.api_client import ApiClient, ApiError, ApiUnavailable
 from src import config
 
@@ -99,11 +99,19 @@ def limpar_cache(monkeypatch):
     st.cache_data.clear()
     monkeypatch.setenv("API_URL", "http://api.teste:9000")
     monkeypatch.delenv("SENSOR_FONTE", raising=False)
+    monkeypatch.setenv("DASHBOARD_USER", "g15")
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "senha-de-teste-123")
     yield
     st.cache_data.clear()
 
 
 def rodar():
+    at = AppTest.from_file(str(DASHBOARD), default_timeout=60)
+    at.session_state["auth_user"] = "g15"
+    return at.run()
+
+
+def rodar_sem_login():
     return AppTest.from_file(str(DASHBOARD), default_timeout=60).run()
 
 
@@ -281,7 +289,6 @@ def test_sem_geojson_cai_no_ranking(monkeypatch):
 
 
 def test_formatacao_e_componentes_visuais():
-    from app import ui
 
     assert ui.fmt_num(73.44) == "73,4" and ui.fmt_num(100) == "100,0" and ui.fmt_num(5.678, 2) == "5,68"
     assert ui.class_label("Alto") == "▲ Alto" and ui.class_label("Médio") == "● Médio" and ui.class_label("Baixo") == "▼ Baixo"
@@ -293,7 +300,6 @@ def test_formatacao_e_componentes_visuais():
 
 
 def test_hero_e_selos():
-    from app import ui
 
     topo = ui.hero("2025-08-17", "2025-08-24", simulated=True)
     assert "AnteceDengue" in topo and "24/08/2025" in topo and "17/08/2025" in topo and "Dados simulados" in topo
@@ -303,7 +309,6 @@ def test_hero_e_selos():
 
 
 def test_painel_top_cartoes_e_tabela_do_ranking():
-    from app import ui
 
     frame = data.predictions_frame(prediction_payload())
     top = ui.top_panel(frame, 5)
@@ -325,7 +330,6 @@ def test_busca_por_bairro_ignora_acentos_e_caixa():
 
 
 def test_tabelas_de_exibicao_das_outras_abas():
-    from app import ui
 
     longo = data.comparison_long(MODEL_INFO)
     assert set(longo["conjunto"]) == {"Validação", "Teste"} and len(longo) == 8
@@ -341,7 +345,6 @@ def test_tabelas_de_exibicao_das_outras_abas():
 
 
 def test_rodape_com_fontes_aviso_e_link_da_api(monkeypatch):
-    from app import ui
 
     monkeypatch.setenv("API_PUBLIC_URL", "http://localhost:8000/")
     rodape = ui.footer()
@@ -361,3 +364,80 @@ def test_rodape_aparece_no_dashboard_e_com_a_api_fora_do_ar(monkeypatch):
     fora = rodar()
     html = " ".join(e.value for e in fora.markdown if isinstance(e.value, str))
     assert "Fontes dos dados" in html and "AnteceDengue" in html and len(fora.error) == 1
+
+
+def test_sem_login_mostra_so_a_tela_de_entrada(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(requests, "get", lambda *a, **k: chamadas.append(a) or FakeResponse(200, {}))
+    at = rodar_sem_login()
+    assert not at.exception
+    assert [b.label for b in at.button] == ["Entrar"]
+    assert len(at.text_input) == 2 and at.text_input[1].proto.type == 1
+    assert not chamadas
+    html = " ".join(m.value for m in at.markdown)
+    assert "AnteceDengue" in html or "Antece" in html
+
+
+def test_login_com_senha_errada_nao_entra(monkeypatch):
+    chamadas = []
+    monkeypatch.setattr(requests, "get", lambda *a, **k: chamadas.append(a) or FakeResponse(200, {}))
+    at = rodar_sem_login()
+    at.text_input[0].input("g15")
+    at.text_input[1].input("errada")
+    at.button[0].click().run()
+    assert any("incorretos" in e.value for e in at.error)
+    assert "auth_user" not in at.session_state and not chamadas
+
+
+def test_login_certo_abre_o_painel(monkeypatch):
+    instalar_api(monkeypatch)
+    at = rodar_sem_login()
+    at.text_input[0].input("g15")
+    at.text_input[1].input("senha-de-teste-123")
+    at.button[0].click().run()
+    assert at.session_state["auth_user"] == "g15"
+    assert not at.exception
+    assert any("Conectado como" in m.value for m in at.markdown)
+    assert "Sair" in [b.label for b in at.button]
+
+
+def test_sair_volta_para_a_tela_de_entrada(monkeypatch):
+    instalar_api(monkeypatch)
+    at = rodar()
+    sair = next(b for b in at.button if b.label == "Sair")
+    sair.click().run()
+    assert "auth_user" not in at.session_state
+    assert [b.label for b in at.button] == ["Entrar"]
+
+
+def test_sem_credenciais_configuradas_o_acesso_fica_fechado(monkeypatch):
+    monkeypatch.delenv("DASHBOARD_PASSWORD")
+    at = rodar_sem_login()
+    assert any("Acesso não configurado" in e.value for e in at.error)
+    assert not at.button
+
+
+def test_senha_de_exemplo_conta_como_nao_configurada(monkeypatch):
+    from app import auth
+
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "troque-a-senha-do-painel")
+    assert auth.configured_credentials() is None
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "abc123")
+    assert auth.configured_credentials() == ("g15", "abc123")
+
+
+def test_check_credentials():
+    from app import auth
+
+    esperado = ("g15", "segredo")
+    assert auth.check_credentials(" g15 ", "segredo", esperado)
+    assert not auth.check_credentials("g15", "Segredo", esperado)
+    assert not auth.check_credentials("outro", "segredo", esperado)
+    assert not auth.check_credentials("", "", esperado)
+
+
+def test_logo_e_marca_sem_recursos_externos():
+    html = ui.logo_mark(48)
+    assert html.startswith('<span class="logo-mark"><svg') and 'width="48"' in html and chr(10) not in html
+    assert "http" not in html.replace("http://www.w3.org/2000/svg", "")
+    assert ui.hero().count("logo-mark") == 1 and "Antece" in ui.hero()
