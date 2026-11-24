@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -211,8 +212,10 @@ def test_dashboard_caminho_feliz(monkeypatch):
     assert len(at.get("plotly_chart")) >= 5
     metricas = {m.label: m.value for m in at.metric}
     assert metricas["Modelo"] == "RandomForest" and metricas["Versão no Registry"] == "1 (champion)"
-    assert sum(int(v) for k, v in metricas.items() if k.startswith("Bairros com classe")) == 94
-    assert "probabilidade de surto" not in " ".join(e.value for e in at.markdown if isinstance(e.value, str)).lower()
+    html = " ".join(e.value for e in at.markdown if isinstance(e.value, str))
+    assert "Bairros em risco Alto" in html and "Maior índice de risco" in html and "Top 5 bairros" in html
+    for trecho in re.finditer("probabilidade de surto", html.lower()):
+        assert "não" in html.lower()[max(0, trecho.start() - 8):trecho.start()]
 
 
 def test_dashboard_interacoes(monkeypatch):
@@ -223,6 +226,12 @@ def test_dashboard_interacoes(monkeypatch):
     assert any(m.label == "Posição no ranking" and m.value.startswith("11º") for m in at.metric)
     at.multiselect(key="rank_classes").set_value(["Alto"]).run()
     assert not at.exception
+    at.text_input(key="rank_busca").set_value("boa vi").run()
+    assert not at.exception
+    assert any("Nenhum bairro" in i.value for i in at.info) or at.dataframe
+    at.text_input(key="rank_busca").set_value("zzzz").run()
+    assert any("Nenhum bairro encontrado" in i.value for i in at.info)
+    at.text_input(key="rank_busca").set_value("").run()
     at.slider(key="rank_n").set_value(10).run()
     assert not at.exception
 
@@ -269,3 +278,47 @@ def test_sem_geojson_cai_no_ranking(monkeypatch):
     at = rodar()
     assert not at.exception
     assert any("Mostrando o ranking em barras" in w.value for w in at.warning)
+
+
+def test_formatacao_e_componentes_visuais():
+    from app import ui
+
+    assert ui.fmt_num(73.44) == "73,4" and ui.fmt_num(100) == "100,0" and ui.fmt_num(5.678, 2) == "5,68"
+    assert ui.class_label("Alto") == "▲ Alto" and ui.class_label("Médio") == "● Médio" and ui.class_label("Baixo") == "▼ Baixo"
+    assert "▲ Alto" in ui.class_chip("Alto")
+    assert ui.risk_color(0) == ui.RISK_SCALE[0] and ui.risk_color(100) == ui.RISK_SCALE[-1]
+    assert ui.risk_color(-5) == ui.risk_color(0) and ui.risk_color(500) == ui.risk_color(100)
+    assert ui.esc("<b>x</b>") == "&lt;b&gt;x&lt;/b&gt;"
+    assert "&lt;script&gt;" in ui.kpi_card("r", "<script>")
+
+
+def test_hero_e_selos():
+    from app import ui
+
+    topo = ui.hero("2025-08-17", "2025-08-24", simulated=True)
+    assert "AnteceDengue" in topo and "24/08/2025" in topo and "17/08/2025" in topo and "Dados simulados" in topo
+    assert "Dados simulados" not in ui.hero("2025-08-17", "2025-08-24")
+    assert "Previsão para a semana" not in ui.hero()
+    assert chr(10) not in topo
+
+
+def test_painel_top_cartoes_e_tabela_do_ranking():
+    from app import ui
+
+    frame = data.predictions_frame(prediction_payload())
+    top = ui.top_panel(frame, 5)
+    assert top.count('class="top-item"') == 5 and "Top 5 bairros" in top and "não calibrado" in top and chr(10) not in top
+    cartoes = ui.summary_cards(frame, "2025-08-17", "2025-08-24")
+    assert "Bairros em risco Baixo" in cartoes and "24/08/2025" in cartoes and "índice" in cartoes
+    visao = ui.ranking_view(data.ranking_table(frame, 3))
+    assert list(visao.columns) == ["Posição", "Bairro", "Classe", "Índice (0 a 100)", "Barra"]
+    assert visao["Classe"].str.contains("Alto|Médio|Baixo").all() and "," in visao["Índice (0 a 100)"].iloc[0]
+
+
+def test_busca_por_bairro_ignora_acentos_e_caixa():
+    frame = data.predictions_frame(prediction_payload(["BOA VIAGEM", "SÃO JOSÉ", "VARZEA"]))
+    tabela = data.ranking_table(frame, 10)
+    assert list(data.filter_by_name(tabela, "boa v")["bairro"]) == ["BOA VIAGEM"]
+    assert list(data.filter_by_name(tabela, "sao jose")["bairro"]) == ["SÃO JOSÉ"]
+    assert len(data.filter_by_name(tabela, "  ")) == 3 and len(data.filter_by_name(tabela, None)) == 3
+    assert data.filter_by_name(tabela, "zzz").empty

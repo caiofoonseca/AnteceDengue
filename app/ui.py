@@ -79,3 +79,91 @@ def summary_cards(frame: pd.DataFrame, week_start, target_week) -> str:
         kpi_card("Semana prevista", data.format_date(target_week), f"base em {data.format_date(week_start)}",
                  "accent", texto=True),
     ])
+
+
+FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+RISK_SCALE = ["#fde8c8", "#f9b872", "#ee8a3b", "#d2561c", "#8a2c08"]
+GRID = "#ece8dd"
+INK = "#1f2933"
+CLASS_SYMBOL = {"Alto": "▲", "Médio": "●", "Baixo": "▼"}
+CLASS_KEY = {"Alto": "alto", "Médio": "medio", "Baixo": "baixo"}
+CLASS_INK = {"Alto": "#8a2c08", "Médio": "#7a4d00", "Baixo": "#0b5249"}
+
+
+def class_label(classe: str) -> str:
+    """A classe sempre em texto, com um símbolo de apoio: '▲ Alto'."""
+    return f"{CLASS_SYMBOL.get(classe, '')} {classe}".strip()
+
+
+def class_chip(classe: str) -> str:
+    return f'<span class="chip chip-{CLASS_KEY.get(classe, "baixo")}">{esc(class_label(classe))}</span>'
+
+
+def risk_color(indice: float) -> str:
+    """Cor da escala de risco (uma só matiz quente, de claro a escuro) para um índice de 0 a 100."""
+    pos = min(max(float(indice), 0.0), 100.0) / 100 * (len(RISK_SCALE) - 1)
+    i = min(int(pos), len(RISK_SCALE) - 2)
+    frac = pos - i
+    a, b = RISK_SCALE[i], RISK_SCALE[i + 1]
+    canais = [round(int(a[k:k + 2], 16) * (1 - frac) + int(b[k:k + 2], 16) * frac) for k in (1, 3, 5)]
+    return "#" + "".join(f"{c:02x}" for c in canais)
+
+
+def card_title(titulo: str, subtitulo: str = "") -> str:
+    sub = f'<div class="card-sub">{esc(subtitulo)}</div>' if subtitulo else ""
+    return f'<div class="card-title">{esc(titulo)}</div>{sub}'
+
+
+def top_panel(frame: pd.DataFrame, n: int = 5) -> str:
+    """Painel 'Top N bairros' com uma barra proporcional ao índice de risco."""
+    linhas = []
+    for _, r in frame.sort_values("rank").head(n).iterrows():
+        largura = min(max(float(r["indice"]), 0.0), 100.0)
+        linhas.append(
+            f'<li class="top-item"><div class="top-head"><span class="top-rank">{int(r["rank"])}</span>'
+            f'<span class="top-name">{esc(r["bairro"])}</span><span class="top-value">{fmt_num(r["indice"])}</span></div>'
+            f'<div class="bar"><div class="bar-fill" style="width:{largura:.1f}%;background:{risk_color(r["indice"])}"></div></div>'
+            f'<div class="top-class">{class_chip(r["classe"])}</div></li>')
+    return (card_title(f"Top {n} bairros", "por índice de risco (0 a 100, não calibrado)")
+            + f'<ol class="top-list">{"".join(linhas)}</ol>')
+
+
+def style_figure(fig, height: int | None = None, titulo: str | None = None):
+    """Estilo comum dos gráficos: fundo transparente, grades suaves, sem bordas pesadas, fonte do sistema."""
+    fig.update_layout(
+        font={"family": FONT_STACK, "size": 14, "color": INK}, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        margin={"l": 8, "r": 16, "t": 48 if titulo else 16, "b": 8}, hoverlabel={"bgcolor": "#ffffff", "font_size": 14,
+                                                                                  "font_family": FONT_STACK},
+        legend={"orientation": "h", "y": -0.2, "title": None})
+    if titulo:
+        fig.update_layout(title={"text": titulo, "x": 0, "font": {"size": 16, "color": INK}})
+    if height:
+        fig.update_layout(height=height)
+    fig.update_xaxes(gridcolor=GRID, zeroline=False, linecolor="rgba(0,0,0,0)", title_font={"size": 13})
+    fig.update_yaxes(gridcolor=GRID, zeroline=False, linecolor="rgba(0,0,0,0)", title_font={"size": 13})
+    return fig
+
+
+def ranking_view(table: pd.DataFrame) -> pd.DataFrame:
+    """Tabela do ranking para exibição: posição, bairro, classe em texto e índice numérico (para a barra)."""
+    return pd.DataFrame({
+        "Posição": table["posição"], "Bairro": table["bairro"], "Classe": table["classe"].map(class_label),
+        "Índice (0 a 100)": table["índice de risco"].map(fmt_num), "Barra": table["índice de risco"].astype(float)})
+
+
+def style_ranking(view: pd.DataFrame):
+    """Cor de texto por classe (a classe continua escrita) e índice com uma casa e vírgula."""
+    def cor(valor: str) -> str:
+        nome = valor.split(" ", 1)[-1]
+        return f"color: {CLASS_INK.get(nome, INK)}; font-weight: 700"
+
+    return view.style.map(cor, subset=["Classe"])
+
+
+RANKING_COLUMNS = {
+    "Posição": st.column_config.NumberColumn("Nº", format="%d", width="small"),
+    "Bairro": st.column_config.TextColumn("Bairro", width="medium"),
+    "Classe": st.column_config.TextColumn("Classe", width="small"),
+    "Índice (0 a 100)": st.column_config.TextColumn("Índice", width="small"),
+    "Barra": st.column_config.ProgressColumn("Escala", min_value=0, max_value=100, format=" ", width="small"),
+}

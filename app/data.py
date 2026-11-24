@@ -164,3 +164,19 @@ LIMITATIONS = [
     "A previsão vale para a semana seguinte à última semana dos dados, não para a semana atual do calendário.",
     "As leituras do sensor são exibidas, mas não alimentam o modelo.",
 ]
+
+
+def normalize_text(texto: str) -> str:
+    """Minúsculas e sem acentos, para a busca por nome de bairro."""
+    import unicodedata
+
+    base = unicodedata.normalize("NFKD", str(texto))
+    return "".join(c for c in base if not unicodedata.combining(c)).casefold().strip()
+
+
+def filter_by_name(table: pd.DataFrame, query: str | None) -> pd.DataFrame:
+    """Mantém as linhas cujo bairro contém o texto buscado (sem diferença de maiúsculas e acentos)."""
+    if not query or not query.strip():
+        return table
+    alvo = normalize_text(query)
+    return table[table["bairro"].map(normalize_text).str.contains(alvo, regex=False)].reset_index(drop=True)

@@ -78,3 +78,26 @@ h3, [data-testid="stHeading"] h3 { letter-spacing: -0.01em; font-weight: 750; }
 p, li, label, h1, h2, h3, h4, td, th, [data-baseweb="tab"] p, [data-testid="stMarkdownContainer"] {
   font-family: var(--font) !important;
 }
+
+[class*="st-key-card_"] {
+  background: var(--surface); border: 1px solid var(--line) !important; border-radius: var(--radius) !important;
+  box-shadow: var(--shadow); padding: 0.4rem 0.6rem;
+}
+.card-title { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.01em; color: var(--ink); }
+.card-sub { font-size: 0.88rem; color: var(--muted); margin-bottom: 0.6rem; }
+
+.chip {
+  display: inline-block; padding: 0.12rem 0.6rem; border-radius: 999px; font-size: 0.82rem; font-weight: 700; border: 1px solid transparent;
+}
+.chip-alto { background: var(--alto-bg); color: var(--alto-ink); border-color: #f0bda3; }
+.chip-medio { background: var(--medio-bg); color: var(--medio-ink); border-color: #ecd49a; }
+.chip-baixo { background: var(--baixo-bg); color: var(--baixo-ink); border-color: #b6d6d0; }
+
+.top-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+.top-head { display: flex; align-items: baseline; gap: 0.6rem; }
+.top-rank { width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 0.85rem; }
+.top-name { flex: 1; font-weight: 700; overflow-wrap: anywhere; }
+.top-value { font-weight: 800; font-variant-numeric: tabular-nums; }
+.bar { height: 0.55rem; margin: 0.35rem 0 0.35rem 2.1rem; background: #efece4; border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; }
+.top-class { margin-left: 2.1rem; }

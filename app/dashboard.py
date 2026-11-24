@@ -45,39 +45,62 @@ def weeks_banner(pred: dict | None) -> None:
         st.warning("Sem previsões disponíveis. Gere-as com `python -m src.predict_batch`.")
 
 
+def risk_map(frame: pd.DataFrame, geojson: dict):
+    dados = frame.assign(indice_txt=frame["indice"].map(ui.fmt_num))
+    figura = px.choropleth_map(
+        dados, geojson=geojson, locations="bairro", featureidkey="properties.bairro", color="indice",
+        color_continuous_scale=ui.RISK_SCALE, range_color=data.RISK_RANGE, custom_data=["classe", "indice_txt", "rank"],
+        map_style="carto-positron", center={"lat": -8.06, "lon": -34.93}, zoom=11.0, opacity=0.85, height=640)
+    figura.update_traces(
+        marker_line_width=0.6, marker_line_color="#ffffff",
+        hovertemplate="<b>%{location}</b><br>Classe: %{customdata[0]}<br>Índice de risco: %{customdata[1]} (0 a 100)"
+                      "<br>Posição: %{customdata[2]}º<extra></extra>")
+    figura.update_layout(
+        margin={"l": 0, "r": 0, "t": 0, "b": 0}, paper_bgcolor="rgba(0,0,0,0)",
+        font={"family": ui.FONT_STACK, "size": 14, "color": ui.INK},
+        coloraxis_colorbar={"title": {"text": "Índice de risco<br>(0 a 100,<br>não calibrado)", "side": "top"},
+                            "thickness": 14, "len": 0.55, "x": 0.99, "xanchor": "right", "y": 0.5,
+                            "bgcolor": "rgba(255,255,255,0.85)", "tickvals": [0, 25, 50, 75, 100]})
+    return figura
+
+
+def ranking_bars(tabela: pd.DataFrame, titulo: str | None = None, altura: int | None = None):
+    dados = tabela.assign(rotulo=tabela["índice de risco"].map(ui.fmt_num))
+    figura = px.bar(dados, x="índice de risco", y=data.ranking_labels(tabela), orientation="h", text="rotulo",
+                    color="índice de risco", color_continuous_scale=ui.RISK_SCALE, range_color=data.RISK_RANGE,
+                    labels={"y": "Bairro (classe)", "índice de risco": "Índice de risco (0 a 100)"})
+    figura.update_traces(textposition="outside", cliponaxis=False, marker_line_width=0,
+                         hovertemplate="%{y}<br>Índice de risco: %{text}<extra></extra>")
+    figura.update_yaxes(autorange="reversed", showgrid=False)
+    figura.update_layout(coloraxis_showscale=False, xaxis_range=[0, 112])
+    return ui.style_figure(figura, height=altura or max(380, 30 * len(tabela) + 60), titulo=titulo)
+
+
 def tab_map(frame: pd.DataFrame, pred: dict) -> None:
     st.subheader("Mapa do índice de risco por bairro")
     weeks_banner(pred)
     if frame.empty:
         return
-    contagem = data.class_counts(frame)
-    cols = st.columns(3)
-    for col, (nome, n) in zip(cols, contagem.items()):
-        col.metric(f"Bairros com classe {nome}", n)
     geojson = data.load_geojson()
     if data.map_ready(geojson, frame):
-        figura = px.choropleth_map(
-            frame, geojson=geojson, locations="bairro", featureidkey="properties.bairro", color="indice",
-            color_continuous_scale=data.COLOR_SCALE, range_color=data.RISK_RANGE, hover_name="bairro",
-            hover_data={"classe": True, "indice": ":.1f", "rank": True, "bairro": False},
-            labels={"indice": "Índice de risco (0–100)", "classe": "Classe", "rank": "Posição"},
-            map_style="carto-positron", center={"lat": -8.05, "lon": -34.92}, zoom=10.6, opacity=0.8, height=620)
-        figura.update_layout(margin={"l": 0, "r": 0, "t": 0, "b": 0},
-                             coloraxis_colorbar={"title": "Índice de risco<br>(0–100, não calibrado)"})
-        st.plotly_chart(figura, width="stretch")
+        mapa, topo = st.columns([3, 1], gap="medium")
+        with mapa:
+            with st.container(border=True, key="card_mapa"):
+                st.plotly_chart(risk_map(frame, geojson), width="stretch")
+        with topo:
+            with st.container(border=True, key="card_top5"):
+                ui.render(ui.top_panel(frame, 5))
         st.caption("Cor: índice de risco (0 = menor, 100 = maior; uma só matiz, legível por daltônicos). "
-                   "A classe de cada bairro aparece em texto ao passar o mouse e no ranking abaixo.")
+                   "A classe de cada bairro aparece em texto ao passar o mouse e no ranking.")
     else:
         st.warning("Os limites geográficos dos bairros (app/assets/bairros.geojson) não estão disponíveis ou não "
                    "cobrem todos os bairros. Mostrando o ranking em barras no lugar do mapa.")
-        tabela = data.ranking_table(frame, len(frame))
-        figura = px.bar(tabela, x="índice de risco", y=data.ranking_labels(tabela), orientation="h",
-                        color="índice de risco", color_continuous_scale=data.COLOR_SCALE, range_color=data.RISK_RANGE,
-                        labels={"y": "Bairro (classe)", "índice de risco": "Índice de risco (0–100)"}, height=1500)
-        figura.update_yaxes(autorange="reversed")
-        st.plotly_chart(figura, width="stretch")
-    st.markdown("**10 bairros de maior índice**")
-    st.dataframe(data.ranking_table(frame, 10), hide_index=True, width="stretch")
+        with st.container(border=True, key="card_mapa"):
+            st.plotly_chart(ranking_bars(data.ranking_table(frame, len(frame)), altura=1500), width="stretch")
+    with st.container(border=True, key="card_tabela10"):
+        ui.render(ui.card_title("10 bairros de maior índice", "índice de risco de 0 a 100, não calibrado"))
+        mais_altos = ui.ranking_view(data.ranking_table(frame, 10))
+        st.dataframe(ui.style_ranking(mais_altos), hide_index=True, width="stretch", column_config=ui.RANKING_COLUMNS)
 
 
 def tab_ranking(frame: pd.DataFrame, pred: dict) -> None:
@@ -85,24 +108,25 @@ def tab_ranking(frame: pd.DataFrame, pred: dict) -> None:
     weeks_banner(pred)
     if frame.empty:
         return
-    esquerda, direita = st.columns([1, 2])
-    with esquerda:
-        n = st.slider("Quantos bairros mostrar", 5, len(frame), min(15, len(frame)), key="rank_n")
-        classes = st.multiselect("Filtrar por classe", list(data.CLASS_TEXT.values()),
-                                 default=list(data.CLASS_TEXT.values()), key="rank_classes")
-    tabela = data.ranking_table(frame, n, classes)
+    busca, classes, quantidade = st.columns([2, 2, 1], gap="medium")
+    texto = busca.text_input("Buscar bairro", placeholder="Digite parte do nome", key="rank_busca")
+    selecionadas = classes.multiselect("Filtrar por classe", list(data.CLASS_TEXT.values()),
+                                       default=list(data.CLASS_TEXT.values()), key="rank_classes")
+    n = quantidade.slider("Quantos bairros", 5, len(frame), min(15, len(frame)), key="rank_n")
+    tabela = data.ranking_table(frame, len(frame), selecionadas)
+    tabela = data.filter_by_name(tabela, texto).head(n)
     if tabela.empty:
-        st.info("Nenhum bairro nas classes selecionadas.")
+        st.info("Nenhum bairro encontrado com esses filtros. Limpe a busca ou escolha outras classes.")
         return
+    esquerda, direita = st.columns([3, 2], gap="medium")
     with esquerda:
-        st.dataframe(tabela, hide_index=True, width="stretch", height=480)
+        with st.container(border=True, key="card_ranking_tabela"):
+            ui.render(ui.card_title(f"{len(tabela)} bairros", "ordenados pelo índice de risco"))
+            st.dataframe(ui.style_ranking(ui.ranking_view(tabela)), hide_index=True, width="stretch", height=520,
+                         column_config=ui.RANKING_COLUMNS)
     with direita:
-        figura = px.bar(tabela, x="índice de risco", y=data.ranking_labels(tabela), orientation="h",
-                        color="índice de risco", color_continuous_scale=data.COLOR_SCALE, range_color=data.RISK_RANGE,
-                        labels={"y": "Bairro (classe)", "índice de risco": "Índice de risco (0–100)"},
-                        title=f"{len(tabela)} bairros de maior índice de risco", height=max(380, 26 * len(tabela)))
-        figura.update_yaxes(autorange="reversed")
-        st.plotly_chart(figura, width="stretch")
+        with st.container(border=True, key="card_ranking_grafico"):
+            st.plotly_chart(ranking_bars(tabela, titulo="Índice de risco por bairro"), width="stretch")
     st.caption("O índice (50 x prob. médio + 100 x prob. alto) ordena os bairros entre si; não é probabilidade de "
                "surto e não é calibrado.")
 
