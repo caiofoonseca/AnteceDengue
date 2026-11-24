@@ -108,14 +108,15 @@ p, li, label, h1, h2, h3, h4, td, th, [data-baseweb="tab"] p, [data-testid="stMa
 .chip-medio { background: var(--medio-bg); color: var(--medio-ink); border-color: #ecd49a; }
 .chip-baixo { background: var(--baixo-bg); color: var(--baixo-ink); border-color: #b6d6d0; }
 
-.top-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+.top-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1rem; }
+.top-item .chip { flex: none; white-space: nowrap; }
 .top-head { display: flex; align-items: baseline; gap: 0.6rem; }
 .top-rank { width: 1.5rem; height: 1.5rem; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 0.85rem; }
 .top-name { flex: 1; font-weight: 700; overflow-wrap: anywhere; }
 .top-value { font-weight: 800; font-variant-numeric: tabular-nums; }
-.bar { height: 0.55rem; margin: 0.35rem 0 0.35rem 2.1rem; background: #efece4; border-radius: 999px; overflow: hidden; }
+.top-bar-row { display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0 0 2.1rem; }
+.bar { flex: 1; min-width: 0; height: 0.55rem; background: #efece4; border-radius: 999px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 999px; }
-.top-class { margin-left: 2.1rem; }
 
 .site-footer {
   margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; line-height: 1.5;
@@ -131,3 +132,6 @@ p, li, label, h1, h2, h3, h4, td, th, [data-baseweb="tab"] p, [data-testid="stMa
 }
 
 [data-testid="stAlert"] p { font-size: 1rem; }
+
+[data-testid="InputInstructions"] { display: none; }
+.st-key-card_top5 { padding-bottom: 1.1rem; }

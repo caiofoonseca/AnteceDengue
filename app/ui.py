@@ -135,8 +135,8 @@ def top_panel(frame: pd.DataFrame, n: int = 5) -> str:
         linhas.append(
             f'<li class="top-item"><div class="top-head"><span class="top-rank">{int(r["rank"])}</span>'
             f'<span class="top-name">{esc(r["bairro"])}</span><span class="top-value">{fmt_num(r["indice"])}</span></div>'
-            f'<div class="bar"><div class="bar-fill" style="width:{largura:.1f}%;background:{risk_color(r["indice"])}"></div></div>'
-            f'<div class="top-class">{class_chip(r["classe"])}</div></li>')
+            f'<div class="top-bar-row"><div class="bar"><div class="bar-fill" style="width:{largura:.1f}%;'
+            f'background:{risk_color(r["indice"])}"></div></div>{class_chip(r["classe"])}</div></li>')
     return (card_title(f"Top {n} bairros", "por índice de risco (0 a 100, não calibrado)")
             + f'<ol class="top-list">{"".join(linhas)}</ol>')
 
@@ -174,7 +174,7 @@ def style_ranking(view: pd.DataFrame):
 
 
 RANKING_COLUMNS = {
-    "Posição": st.column_config.NumberColumn("Nº", format="%d", width="small"),
+    "Posição": None,
     "Bairro": st.column_config.TextColumn("Bairro", width="medium"),
     "Classe": st.column_config.TextColumn("Classe", width="small"),
     "Índice (0 a 100)": st.column_config.TextColumn("Índice", width="small"),

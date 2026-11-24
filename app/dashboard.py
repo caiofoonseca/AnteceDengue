@@ -33,6 +33,13 @@ def show_chart(figura) -> None:
     st.plotly_chart(figura, width="stretch", config={"displayModeBar": False, "scrollZoom": False})
 
 
+def show_map(figura) -> None:
+    """Mapa interativo: arrastar para mover, roda do mouse para dar zoom e botões de zoom ao passar o mouse."""
+    st.plotly_chart(figura, width="stretch", config={
+        "displayModeBar": "hover", "displaylogo": False, "scrollZoom": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d"]})
+
+
 def show_api_down(erro: ApiUnavailable, com_cabecalho: bool = True) -> None:
     if com_cabecalho:
         ui.render(ui.hero(simulated=ui.simulated_source()))
@@ -62,7 +69,7 @@ def risk_map(frame: pd.DataFrame, geojson: dict):
         hovertemplate="<b>%{location}</b><br>Classe: %{customdata[0]}<br>Índice de risco: %{customdata[1]} (0 a 100)"
                       "<br>Posição: %{customdata[2]}º<extra></extra>")
     figura.update_layout(
-        margin={"l": 0, "r": 0, "t": 0, "b": 0}, paper_bgcolor="rgba(0,0,0,0)",
+        dragmode="pan", margin={"l": 0, "r": 0, "t": 0, "b": 0}, paper_bgcolor="rgba(0,0,0,0)",
         font={"family": ui.FONT_STACK, "size": 14, "color": ui.INK},
         coloraxis_colorbar={"title": {"text": "Índice de risco<br>(0 a 100,<br>não calibrado)", "side": "top"},
                             "thickness": 14, "len": 0.55, "x": 0.99, "xanchor": "right", "y": 0.5,
@@ -92,7 +99,7 @@ def tab_map(frame: pd.DataFrame, pred: dict) -> None:
         mapa, topo = st.columns([3, 1], gap="medium")
         with mapa:
             with st.container(border=True, key="card_mapa"):
-                show_chart(risk_map(frame, geojson))
+                show_map(risk_map(frame, geojson))
         with topo:
             with st.container(border=True, key="card_top5"):
                 ui.render(ui.top_panel(frame, 5))
