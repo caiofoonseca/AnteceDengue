@@ -50,3 +50,12 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb   # r
 ```
 
 Os gráficos são salvos em `reports/figuras/eda_*.png` (150 dpi). A seção 9 precisa de `models/best_model.joblib` (gerado por `python -m src.train --final`).
+
+## Inferência em lote
+
+```powershell
+python -m src.predict_batch               # champion do MLflow Registry (cai no joblib se o Registry falhar)
+python -m src.predict_batch --no-registry # só models/best_model.joblib
+```
+
+Grava `data/processed/predictions_latest.csv` (um bairro por linha, ordenado por `rank`, 1 = maior risco) com a previsão da semana seguinte à última semana dos dados. `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100, não uma probabilidade. A previsão vale para a última semana presente nos dados (hoje 2025-08-17), os casos chegam dos CSVs anuais com atraso e o sensor não alimenta o modelo.

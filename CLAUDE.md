@@ -48,6 +48,14 @@
 - O teste é avaliado UMA única vez (`--final`), com o modelo já escolhido; `reports/teste_final.json` trava reavaliações (`--force-reeval` invalida a conclusão).
 - Conjunto de features: decidido por ablação (atual x atual + features da cidade, só passado); se a diferença for menor que o desvio entre folds, fica o conjunto mais simples.
 
+## Decisões de uso (passo 9: inferência em lote)
+- `python -m src.predict_batch` carrega o champion do MLflow Registry (ou `models/best_model.joblib` se o Registry estiver inacessível), confere a versão do scikit-learn contra `models/model_meta.json` e grava `data/processed/predictions_latest.csv`.
+- Limitação 1: a previsão é feita sobre a última semana presente nos dados (hoje PANEL_END = 2025-08-17), então prevê a semana seguinte a essa data, não a semana atual do calendário.
+- Limitação 2: os casos vêm de CSVs anuais do portal, que chegam com atraso; a previsão só se atualiza quando os CSVs forem atualizados.
+- Limitação 3: as leituras do sensor NÃO alimentam o modelo (só a demonstração ao vivo e o dashboard).
+- `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100 para ordenar bairros; não é probabilidade.
+- As colunas de features da inferência são exatamente as de `model_meta.json`, na mesma ordem; se faltar alguma, a função falha com erro claro.
+
 ## Registro de uso de IA
 - Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
 

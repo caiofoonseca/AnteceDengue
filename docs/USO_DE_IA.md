@@ -39,3 +39,7 @@ Projeto AnteceDengue (G15), CESAR School. Ferramenta: Claude Code (modelo Claude
 ## Passo 8 — Notebook de EDA (23/11/2026)
 - **O que o Claude Code fez:** gerou `notebooks/01_eda.ipynb` (10 seções, 12 figuras em `reports/figuras/eda_*.png`, executado de cima a baixo), com a EDA restrita a treino e validação; escreveu a interpretação de cada figura e tabela a partir das saídas das células; recalculou a importância de features a partir do modelo salvo (impureza e permutação na validação); acrescentou jupyter, nbconvert, ipykernel e nbformat ao `requirements.txt`, o README e `tests/test_notebook.py`.
 - **Verificação humana:** o Caio deve conferir os números citados nas interpretações contra as saídas do notebook e avaliar os pontos que o Claude Code marcou como menos seguros (sinal da temperatura, defasagem da chuva, ganho das features da cidade).
+
+## Passo 9 — Inferência em lote (24/11/2026)
+- **O que o Claude Code fez:** criou `src/predict_batch.py` (carrega o champion do Registry com fallback para o joblib, confere a versão do scikit-learn, monta as features da última semana, valida as colunas contra `model_meta.json` e grava `predictions_latest.csv`), os testes em `tests/test_predict_batch.py`, as limitações no CLAUDE.md e o README. Verificou que o Docker não está instalado, sem instalar nada.
+- **Verificação humana:** o Caio deve conferir o ranking gerado e a leitura das limitações (previsão sobre a última semana dos dados, não sobre a semana atual).
