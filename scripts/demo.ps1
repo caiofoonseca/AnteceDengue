@@ -22,10 +22,20 @@ if ($Down) {
 }
 
 if (-not (Test-Path .env)) {
-    Copy-Item .env.example .env
-    Write-Host "Criei o .env a partir de .env.example. Edite as senhas (POSTGRES_PASSWORD, AIRFLOW_*) e rode de novo."
+    Write-Host "Falta o .env. Rode: python scripts/setup_env.py (gera as senhas) e depois este script de novo."
     exit 1
 }
+
+function Get-EnvValue($chave, $padrao) {
+    $linha = Select-String -Path .env -Pattern "^$chave=(.+)$" | Select-Object -First 1
+    if ($linha) { return $linha.Matches[0].Groups[1].Value.Trim() }
+    return $padrao
+}
+$portaDash = Get-EnvValue "DASHBOARD_HOST_PORT" "8501"
+$portaApi = Get-EnvValue "API_HOST_PORT" "8000"
+$portaMlflow = Get-EnvValue "MLFLOW_HOST_PORT" "5000"
+$usuarioDash = Get-EnvValue "DASHBOARD_USER" "g15"
+$authDash = Get-EnvValue "DASHBOARD_AUTH" "on"
 
 $portaAirflow = "8080"
 $linha = Select-String -Path .env -Pattern '^AIRFLOW_HOST_PORT=(.+)$' | Select-Object -First 1
@@ -41,7 +51,7 @@ Write-Host "== 1/5 Subindo a pilha base =="
 Invoke-Compose @base up --build -d
 
 Write-Host "== 2/5 Conferindo o champion no MLflow =="
-$aliasUrl = "http://localhost:5000/api/2.0/mlflow/registered-models/alias?name=antecedengue-risk-classifier&alias=champion"
+$aliasUrl = "http://localhost:$portaMlflow/api/2.0/mlflow/registered-models/alias?name=antecedengue-risk-classifier&alias=champion"
 $existe = $false
 try { $null = Invoke-WebRequest -Uri $aliasUrl -UseBasicParsing -TimeoutSec 10; $existe = $true } catch { $existe = $false }
 if ($existe) {
@@ -67,8 +77,13 @@ for ($i = 0; $i -lt 20; $i++) {
 Invoke-Compose @base exec -T api python -m src.sensor_agg | Out-Null
 
 Write-Host "== 5/5 Pronto =="
-Write-Host "Dashboard : http://localhost:8501   (sensor SIMULADO)"
-Write-Host "API       : http://localhost:8000/docs"
-Write-Host "MLflow    : http://localhost:5000"
+Write-Host "Dashboard : http://localhost:$portaDash   (sensor SIMULADO)"
+if ($authDash -eq "off") {
+    Write-Host "Login     : desligado (DASHBOARD_AUTH=off)"
+} else {
+    Write-Host "Login     : usuário $usuarioDash; a senha está em DASHBOARD_PASSWORD no arquivo .env"
+}
+Write-Host "API       : http://localhost:$portaApi/docs"
+Write-Host "MLflow    : http://localhost:$portaMlflow"
 if ($Airflow) { Write-Host "Airflow   : http://localhost:$portaAirflow   (usuário e senha em AIRFLOW_ADMIN_* no .env)" }
 Write-Host "Para derrubar: scripts\demo.ps1 -Down   (ou -Down -Volumes para apagar os dados)"

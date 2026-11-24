@@ -441,3 +441,23 @@ def test_logo_e_marca_sem_recursos_externos():
     assert html.startswith('<span class="logo-mark"><svg') and 'width="48"' in html and chr(10) not in html
     assert "http" not in html.replace("http://www.w3.org/2000/svg", "")
     assert ui.hero().count("logo-mark") == 1 and "Antece" in ui.hero()
+
+
+def test_login_desligado_so_com_dashboard_auth_off(monkeypatch):
+    from app import auth
+
+    assert not auth.auth_disabled()
+    monkeypatch.setenv("DASHBOARD_AUTH", "off")
+    assert auth.auth_disabled()
+    monkeypatch.setenv("DASHBOARD_AUTH", "talvez")
+    assert not auth.auth_disabled()
+
+
+def test_painel_abre_sem_login_quando_desligado(monkeypatch):
+    instalar_api(monkeypatch)
+    monkeypatch.setenv("DASHBOARD_AUTH", "off")
+    monkeypatch.delenv("DASHBOARD_PASSWORD")
+    at = rodar_sem_login()
+    assert not at.exception and not at.error
+    html = " ".join(m.value for m in at.markdown)
+    assert "login desligado" in html and "Conectado como" not in html

@@ -26,10 +26,16 @@ if [ "$DOWN" = 1 ]; then
 fi
 
 if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "Criei o .env a partir de .env.example. Edite as senhas (POSTGRES_PASSWORD, AIRFLOW_*) e rode de novo."
+  echo "Falta o .env. Rode: python scripts/setup_env.py (gera as senhas) e depois este script de novo."
   exit 1
 fi
+
+env_val() { grep -E "^$1=" .env | head -1 | cut -d= -f2- | tr -d '\r' || true; }
+porta_dash=$(env_val DASHBOARD_HOST_PORT); porta_dash=${porta_dash:-8501}
+porta_api=$(env_val API_HOST_PORT); porta_api=${porta_api:-8000}
+porta_mlflow=$(env_val MLFLOW_HOST_PORT); porta_mlflow=${porta_mlflow:-5000}
+usuario_dash=$(env_val DASHBOARD_USER); usuario_dash=${usuario_dash:-g15}
+auth_dash=$(env_val DASHBOARD_AUTH); auth_dash=${auth_dash:-on}
 
 porta_airflow=$(grep -E '^AIRFLOW_HOST_PORT=' .env | cut -d= -f2 || true)
 porta_airflow=${porta_airflow:-8080}
@@ -40,7 +46,7 @@ echo "== 1/5 Subindo a pilha base =="
 "${COMPOSE[@]}" up --build -d
 
 echo "== 2/5 Conferindo o champion no MLflow =="
-alias_url="http://localhost:5000/api/2.0/mlflow/registered-models/alias?name=antecedengue-risk-classifier&alias=champion"
+alias_url="http://localhost:${porta_mlflow}/api/2.0/mlflow/registered-models/alias?name=antecedengue-risk-classifier&alias=champion"
 if curl -fsS "$alias_url" >/dev/null 2>&1; then
   echo "champion já existe; seed não necessário"
 else
@@ -59,8 +65,13 @@ done
 "${COMPOSE[@]}" exec -T api python -m src.sensor_agg >/dev/null
 
 echo "== 5/5 Pronto =="
-echo "Dashboard : http://localhost:8501   (sensor SIMULADO)"
-echo "API       : http://localhost:8000/docs"
-echo "MLflow    : http://localhost:5000"
+echo "Dashboard : http://localhost:${porta_dash}   (sensor SIMULADO)"
+if [ "$auth_dash" = "off" ]; then
+  echo "Login     : desligado (DASHBOARD_AUTH=off)"
+else
+  echo "Login     : usuário ${usuario_dash}; a senha está em DASHBOARD_PASSWORD no arquivo .env"
+fi
+echo "API       : http://localhost:${porta_api}/docs"
+echo "MLflow    : http://localhost:${porta_mlflow}"
 if [ "$AIRFLOW" = 1 ]; then echo "Airflow   : http://localhost:${porta_airflow}   (usuário e senha em AIRFLOW_ADMIN_* no .env)"; fi
 echo "Para derrubar: scripts/demo.sh --down   (ou --down --volumes para apagar os dados)"

@@ -113,7 +113,8 @@ Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana bas
 ## Docker Compose (pilha completa, sem Airflow)
 Serviços: mosquitto (1883), postgres, mlflow (5000), ingestor MQTT, api (8000) e dashboard (8501). Ordem de uso:
 ```
-cp .env.example .env                       # edite POSTGRES_PASSWORD (só letras e números)
+python scripts/setup_env.py                # cria o .env e gera as senhas (Postgres, Airflow, login do dashboard)
+python scripts/doctor.py                   # confere arquivos, Docker, .env, portas e riscos de configuração
 docker compose up --build -d               # sobe tudo e espera os healthchecks
 docker compose --profile init run --rm seed-mlflow   # registra o champion no MLflow do compose (uma vez)
 docker compose restart api                 # a API passa a carregar o modelo do Registry
@@ -126,6 +127,8 @@ Pré-requisito: `models/` e `data/processed/` gerados (a API os monta somente le
 - Teste de integração do ingestor contra o Mosquitto do compose: `MQTT_HOST=localhost pytest -m integration`.
 - Postgres do compose em `127.0.0.1:5433` (variável `POSTGRES_HOST_PORT`); MLflow em http://localhost:5000.
 - Logs: `docker compose logs -f ingestor`. Parar: `docker compose down` (mantém os dados). Apagar também os volumes (banco, MLflow, Mosquitto): `docker compose down -v`.
+- **Rede:** API e dashboard publicam só em `127.0.0.1`. Para liberar na rede, defina `BIND_ADDRESS=0.0.0.0` no `.env` (a API não tem autenticação e o login do dashboard é simples; use só em rede de demonstração). O Mosquitto fica em `0.0.0.0:1883` porque a ESP32 precisa se conectar. As portas do host são configuráveis: `API_HOST_PORT`, `DASHBOARD_HOST_PORT`, `MLFLOW_HOST_PORT`, `MQTT_HOST_PORT`, `POSTGRES_HOST_PORT`.
+- **Login do dashboard:** usuário em `DASHBOARD_USER` (padrão `g15`) e senha em `DASHBOARD_PASSWORD` (gerada pelo `setup_env.py`). `DASHBOARD_AUTH=off` desliga o login só para demonstração (padrão: ligado).
 - O Mosquitto aceita conexões anônimas (só para desenvolvimento). A pilha usa cerca de 0,8 GiB no total; nenhum serviço passa de 1 GiB.
 
 ## Airflow (perfil `airflow`) e script de demonstração

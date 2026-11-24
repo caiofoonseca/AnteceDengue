@@ -20,6 +20,11 @@ LOCK_SECONDS = 30
 PLACEHOLDER_PREFIXES = ("troque", "gere", "change", "changeme")
 
 
+def auth_disabled() -> bool:
+    """Login desligado só se DASHBOARD_AUTH for off, 0, false ou no (padrão: ligado)."""
+    return os.getenv("DASHBOARD_AUTH", "on").strip().lower() in ("off", "0", "false", "no")
+
+
 def configured_credentials() -> tuple[str, str] | None:
     """(usuário, senha) do ambiente, ou None se faltar algo ou se a senha ainda for o texto de exemplo."""
     usuario = os.getenv("DASHBOARD_USER", "").strip()
@@ -91,6 +96,8 @@ def login_page(esperado: tuple[str, str] | None) -> None:
 
 def require_login() -> str:
     """Devolve o usuário autenticado; se não houver sessão, mostra a tela de entrada e interrompe a execução."""
+    if auth_disabled():
+        return ""
     if is_authenticated():
         return st.session_state[SESSION_KEY]
     login_page(configured_credentials())
@@ -99,6 +106,9 @@ def require_login() -> str:
 
 def session_bar(usuario: str) -> None:
     """Faixa fina abaixo do cabeçalho com o usuário conectado e o botão Sair."""
+    if auth_disabled():
+        ui.render('<div class="session-user">Modo demonstração: login desligado (DASHBOARD_AUTH=off)</div>')
+        return
     texto, botao = st.columns([11, 1.4], vertical_alignment="center")
     with texto:
         ui.render(f'<div class="session-user">Conectado como <strong>{ui.esc(usuario)}</strong></div>')

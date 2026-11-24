@@ -86,3 +86,11 @@ def test_seed_so_registra_linhas_do_experimento_03(tmp_path):
     falso = Falso()
     assert seed_mlflow.seed_comparison(falso, csv) == 1
     assert falso.runs == ["B (otimizado)"]
+
+
+def test_api_e_dashboard_publicam_so_no_localhost_por_padrao():
+    servicos = COMPOSE["services"]
+    for nome in ("api", "dashboard"):
+        assert all(p.startswith("${BIND_ADDRESS:-127.0.0.1}:") for p in servicos[nome]["ports"])
+    assert servicos["mosquitto"]["ports"] == ["${MQTT_HOST_PORT:-1883}:1883"]
+    assert "BIND_ADDRESS" in (ROOT / ".env.example").read_text(encoding="utf-8")
