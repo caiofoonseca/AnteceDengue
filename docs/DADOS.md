@@ -4,7 +4,7 @@
 - **Conjunto:** "Casos de Dengue, Zika e Chikungunya" — Secretaria de Saúde do Recife (publicado pela EMPREL).
 - **Portal:** Portal de Dados Abertos do Recife — https://dados.recife.pe.gov.br/dataset/casos-de-dengue-zika-e-chikungunya
 - **API usada para descobrir os arquivos:** `https://dados.recife.pe.gov.br/api/3/action/package_show?id=casos-de-dengue-zika-e-chikungunya`
-- **Licença:** Open Data Commons Open Database License (ODbL) — http://www.opendefinition.org/licenses/odc-odbl
+- **Licença:** Open Data Commons Open Database License (ODbL) — http://www.opendefinition.org/licenses/odc-odbl (conferida em 24/11/2026 nos metadados do conjunto no portal, campo `license_id = odc-odbl`).
 - **Frequência de atualização informada pelo portal:** trimestral.
 - **Data do download:** 23/11/2026.
 - **Arquivos usados:** os 13 CSVs "Casos de Dengue" de 2013 a 2025 (um por ano) e, como apoio, a "Tabela de Bairros" e os dois JSON de metadados de dengue.
@@ -33,8 +33,8 @@ Se o download automático falhar, baixe manualmente pela página do conjunto de 
 
 | Variável | Fonte | Licença / observação |
 |---|---|---|
-| temp_media, temp_min, temp_max, umid_media | InfoDengue, `https://info.dengue.mat.br/api/alertcity` (geocode 2611606, doença dengue), colunas `tempmed`, `tempmin`, `tempmax`, `umidmed` | Dados do projeto InfoDengue (Fiocruz/FGV); citar a fonte. A resposta real da API **não traz precipitação**. |
-| chuva_mm | Open-Meteo Historical Weather API, `https://archive-api.open-meteo.com/v1/archive`, modelo **ERA5**, variável `precipitation_sum` (ponto -8.05, -34.9) | Open-Meteo oferece dados abertos sob CC BY 4.0 (uso não comercial gratuito); citar Open-Meteo e o ERA5/Copernicus. **É reanálise em grade (~25 km), não observação de estação.** |
+| temp_media, temp_min, temp_max, umid_media | InfoDengue, `https://info.dengue.mat.br/api/alertcity` (geocode 2611606, doença dengue), colunas `tempmed`, `tempmin`, `tempmax`, `umidmed` | Licença dos dados **não localizada**; citar InfoDengue (Fiocruz/FGV) como fonte. A resposta real da API **não traz precipitação**. |
+| chuva_mm | Open-Meteo Historical Weather API, `https://archive-api.open-meteo.com/v1/archive`, modelo **ERA5**, variável `precipitation_sum` (ponto -8.05, -34.9) | CC BY 4.0 (conferido em 24/11/2026 em open-meteo.com/en/licence e /en/terms). Exige link visível onde os dados forem exibidos: "Weather data by Open-Meteo.com" (https://open-meteo.com/). Citação: Zippenfenig, P. (2023). Open-Meteo.com Weather API [Computer software]. Zenodo. https://doi.org/10.5281/ZENODO.7970649. A API gratuita é só para uso não comercial; citar também o ERA5/Copernicus. **É reanálise em grade (~25 km), não observação de estação.** |
 
 - **INMET foi tentado primeiro** (estação automática A301, Recife, zips anuais em `https://portal.inmet.gov.br/uploads/dadoshistoricos/<ano>.zip`) e descartado: chuva vazia em 2022 e 2023, estação ausente nos zips de 2024 e 2025. É usado só para validar o Open-Meteo em 2015–2021 (ver `reports/clima_qualidade.md`).
 - Semana = domingo a sábado (`week_start`), somando a chuva por dia local; o número da semana epidemiológica não é usado, então a virada de ano não gera erro.
@@ -48,6 +48,17 @@ Brutos ficam em `data/raw/clima/` (fora do git). Para refazer a validação com 
 
 ## Limites dos bairros (mapa do dashboard)
 - Fonte: Portal de Dados Abertos do Recife (https://dados.recife.pe.gov.br), conjunto "Área urbana", recurso "Bairros do Recife" (GeoJSON), obtido via API CKAN em 24/11/2026.
-- Licença: ODbL (Open Database License), a mesma dos demais dados do portal.
+- Licença: ODbL (Open Database License), conferida em 24/11/2026 nos metadados do conjunto "Área urbana" no portal (`license_id = odc-odbl`).
 - Tratamento: `scripts/build_bairros_geojson.py` normaliza os nomes com o mesmo normalizador do painel (94 de 94 bairros casam) e simplifica os polígonos (Douglas-Peucker, tolerância 0,00002 grau, 5 casas decimais). A simplificação é só visual; o arquivo (`app/assets/bairros.geojson`, ~0,19 MB) não serve para medições de área.
 - O download do portal oscila (erro 503 intermitente); o script tenta de novo até 6 vezes.
+
+## Licenças (resumo, conferido em 24/11/2026)
+| Dado | Licença | Observação |
+|---|---|---|
+| Casos de dengue (Portal de Dados Abertos do Recife) | ODbL | conferida nos metadados do conjunto no portal |
+| GeoJSON de bairros (`app/assets/bairros.geojson`) | ODbL | conferida nos metadados do conjunto "Área urbana" |
+| Chuva (Open-Meteo, ERA5) | CC BY 4.0 | link obrigatório "Weather data by Open-Meteo.com"; citação Zippenfenig (2023), DOI 10.5281/ZENODO.7970649; uso gratuito só não comercial |
+| Temperatura e umidade (InfoDengue) | não localizada | citar Fiocruz/FGV |
+
+**Nota sobre a ODbL:** a licença tem cláusula de compartilhamento pela mesma licença (share-alike) para bases de dados derivadas que forem distribuídas. O painel e os arquivos derivados dos casos e do GeoJSON, se publicados, devem manter a ODbL e a atribuição ao Portal de Dados Abertos do Recife.
+

@@ -125,3 +125,9 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Login (`app/auth.py`): usuário e senha só do ambiente (`DASHBOARD_USER`, `DASHBOARD_PASSWORD`, no `.env`). Sem credenciais válidas, ou com a senha de exemplo, o acesso fica fechado (nunca aberto). Comparação em tempo constante e bloqueio de 30 s após 5 falhas por sessão. Protege só a interface; a API continua aberta na porta 8000.
 - `.gitignore` tem a seção "# Embarcados e segredos" (secrets.h, .pio/, .env.*, *.bak); `.env.example` continua versionado.
 
+## Limitações conhecidas
+- O IC do teste vem do bootstrap em blocos de 4 semanas ([+0,021, +0,054]); com blocos de 1 semana fica [+0,017, +0,061] e com 2 semanas [+0,020, +0,057].
+- As estatísticas da EDA só reproduzem excluindo as 8 primeiras semanas do painel; sem essa exclusão os limiares viram (0, 2) e a persistência 76,1%.
+- Mosquitto anônimo e dashboard com login simples (usuário e senha do `.env`) são só para desenvolvimento e demonstração; a API não tem autenticação. API e dashboard publicam em 127.0.0.1 por padrão (`BIND_ADDRESS`).
+- O modelo final e os dados processados são versionados; `--final` não pode ser repetido (a guarda do teste recusa).
+
