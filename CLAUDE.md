@@ -91,3 +91,11 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Um passo por vez. Só considere o passo concluído quando os critérios de pronto estiverem verificados e você mostrar a evidência (saída de comando ou teste).
 - Não instale dependências nem mude decisões acima sem avisar antes.
 - Se algo estiver ambíguo, pergunte ao Caio em vez de inventar.
+
+## Decisões do dashboard (passo 12)
+- O dashboard (`streamlit run app/dashboard.py`) consome só a API (`API_URL`); nunca lê arquivos nem o modelo. Funções puras em `app/data.py`, cliente HTTP em `app/api_client.py`.
+- Sempre "índice de risco" (0 a 100, não calibrado); nunca "probabilidade de surto". Probabilidades por classe aparecem com aviso de que não são calibradas.
+- Toda tela com previsão mostra a semana base e a semana prevista (hoje 17/08/2025 e 24/08/2025) e que não é monitoramento em tempo real nem diagnóstico.
+- Leituras do sensor são exibidas como monitoramento de microclima e não alimentam o modelo. Se vierem de dados simulados/de teste, o dashboard avisa (variável `SENSOR_FONTE`, pois a API não distingue).
+- Mapa: limites oficiais dos bairros do portal (ODbL), `app/assets/bairros.geojson`; se faltar ou não cobrir os bairros, cai para ranking em barras com aviso. Paleta de uma só matiz (Oranges), classe sempre também em texto.
+- A persistência na validação fica em `models/model_meta.json` (`persistencia_f1_macro`, `persistencia_recall_alto`) para a aba Modelo.

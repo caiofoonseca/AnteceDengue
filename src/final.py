@@ -193,6 +193,9 @@ def run_final(df: pd.DataFrame, tracker: Tracker, force_reeval: bool = False, ch
     val_metrics = {"f1_macro": choice["val_f1_macro"], "recall_alto": choice["val_recall_alto"],
                    "auc_macro": choice["val_auc_macro"], "cv_f1_macro_media_f2_5": choice["cv_f1_media_f2_5"],
                    "ajustado_em": "treino (sem validação)"}
+    pers_val = persistence_baseline(split.val, thr)
+    val_metrics["persistencia_f1_macro"] = pers_val["f1_macro"]
+    val_metrics["persistencia_recall_alto"] = pers_val["recall_alto"]
     test_metrics = {"f1_macro": m_test["f1_macro"], "balanced_accuracy": m_test["balanced_accuracy"],
                     "recall_alto": m_test["recall_alto"], "auc_macro": roc["auc_macro"],
                     "persistencia_f1_macro": m_pers["f1_macro"], "persistencia_recall_alto": m_pers["recall_alto"],

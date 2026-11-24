@@ -45,3 +45,9 @@ python scripts/build_clima.py            # baixa InfoDengue + Open-Meteo, gera d
 python scripts/build_clima.py --sem-download   # só reprocessa os brutos já em data/raw/clima/
 ```
 Brutos ficam em `data/raw/clima/` (fora do git). Para refazer a validação com o INMET: `python -c "from src import data_clima as c; [c.download_inmet_year(y) for y in range(2015, 2022)]"` (cada zip tem ~100 MB).
+
+## Limites dos bairros (mapa do dashboard)
+- Fonte: Portal de Dados Abertos do Recife (https://dados.recife.pe.gov.br), conjunto "Área urbana", recurso "Bairros do Recife" (GeoJSON), obtido via API CKAN em 24/11/2026.
+- Licença: ODbL (Open Database License), a mesma dos demais dados do portal.
+- Tratamento: `scripts/build_bairros_geojson.py` normaliza os nomes com o mesmo normalizador do painel (94 de 94 bairros casam) e simplifica os polígonos (Douglas-Peucker, tolerância 0,00002 grau, 5 casas decimais). A simplificação é só visual; o arquivo (`app/assets/bairros.geojson`, ~0,19 MB) não serve para medições de área.
+- O download do portal oscila (erro 503 intermitente); o script tenta de novo até 6 vezes.

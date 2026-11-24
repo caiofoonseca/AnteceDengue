@@ -93,3 +93,13 @@ curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" -
 ```
 
 `risk_score` é um índice de ordenação de 0 a 100, não calibrado (não é probabilidade de surto). As leituras do sensor são exibidas mas não entram na previsão. Variáveis: `DATABASE_URL` (banco do sensor), `API_CORS_ORIGINS` (origens do dashboard, separadas por vírgula).
+
+## Dashboard (Streamlit)
+O dashboard consome só a API. Em dois terminais, com o ambiente virtual ativo:
+```
+uvicorn api.main:app --port 8000
+streamlit run app/dashboard.py
+```
+Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`real` por padrão; com `simulado` ou `teste` a aba Sensor avisa que os dados não são de estações reais). Se a API estiver fora do ar, o dashboard mostra o endereço tentado.
+
+Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana base e a semana prevista no topo de cada aba; não é monitoramento em tempo real nem diagnóstico. O mapa usa os limites oficiais dos bairros (`app/assets/bairros.geojson`, ver `docs/DADOS.md`) e os tiles do mapa precisam de internet. Para refazer o GeoJSON: `python scripts/build_bairros_geojson.py`. Para gravar a persistência da validação em `models/model_meta.json` sem retreinar: `python scripts/patch_meta_persistencia.py` (novas execuções de `src.final` já gravam).

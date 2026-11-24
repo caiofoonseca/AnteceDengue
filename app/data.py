@@ -1,0 +1,166 @@
+"""Transformações de dados do dashboard (sem Streamlit), para poderem ser testadas com pytest.
+
+O dashboard fala em "índice de risco" (0 a 100, não calibrado), nunca em probabilidade de surto.
+"""
+import json
+from pathlib import Path
+
+import pandas as pd
+
+CLASSES = ["baixo", "medio", "alto"]
+CLASS_TEXT = {"baixo": "Baixo", "medio": "Médio", "alto": "Alto"}
+COLOR_SCALE = "Oranges"
+RISK_RANGE = (0, 100)
+GEOJSON_PATH = Path(__file__).resolve().parent / "assets" / "bairros.geojson"
+SENSOR_TEST_SOURCES = ("simulado", "simulador", "teste", "sintetico", "sintético")
+
+
+def format_date(valor) -> str:
+    """'2025-08-17' -> '17/08/2025'."""
+    return pd.to_datetime(valor).strftime("%d/%m/%Y")
+
+
+def weeks_notice(week_start, target_week) -> str:
+    return (f"Semana base: {format_date(week_start)} | semana prevista: {format_date(target_week)}. "
+            "O índice de risco é uma previsão para a semana seguinte à última semana dos dados; "
+            "não é monitoramento em tempo real nem diagnóstico.")
+
+
+def load_geojson(path: Path = GEOJSON_PATH) -> dict | None:
+    if not Path(path).exists():
+        return None
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def predictions_frame(payload: dict) -> pd.DataFrame:
+    """Previsões da API em um DataFrame com nomes de coluna em português, ordenado por rank."""
+    df = pd.DataFrame(payload["predictions"])
+    if df.empty:
+        return pd.DataFrame(columns=["bairro", "classe", "indice", "rank", "prob_baixo", "prob_medio", "prob_alto"])
+    out = pd.DataFrame({
+        "bairro": df["bairro"], "classe": df["rotulo_previsto"].map(CLASS_TEXT), "indice": df["risk_score"],
+        "rank": df["rank"], "prob_baixo": df["prob_baixo"], "prob_medio": df["prob_medio"],
+        "prob_alto": df["prob_alto"]})
+    return out.sort_values("rank").reset_index(drop=True)
+
+
+def geojson_coverage(geojson: dict, frame: pd.DataFrame) -> dict:
+    """Bairros do mapa sem previsão e bairros com previsão sem polígono."""
+    no_mapa = {f["properties"]["bairro"] for f in geojson["features"]}
+    com_previsao = set(frame["bairro"])
+    return {"sem_previsao": sorted(no_mapa - com_previsao), "sem_poligono": sorted(com_previsao - no_mapa),
+            "casados": len(no_mapa & com_previsao)}
+
+
+def map_ready(geojson: dict | None, frame: pd.DataFrame) -> bool:
+    """O mapa só é desenhado se o GeoJSON existe e cobre todos os bairros com previsão."""
+    if geojson is None or frame.empty:
+        return False
+    return not geojson_coverage(geojson, frame)["sem_poligono"]
+
+
+def class_counts(frame: pd.DataFrame) -> dict[str, int]:
+    contagem = frame["classe"].value_counts()
+    return {CLASS_TEXT[c]: int(contagem.get(CLASS_TEXT[c], 0)) for c in CLASSES}
+
+
+def ranking_table(frame: pd.DataFrame, top: int, classes: list[str] | None = None) -> pd.DataFrame:
+    """N bairros de maior índice, opcionalmente só de certas classes (textos como 'Alto')."""
+    df = frame
+    if classes:
+        df = df[df["classe"].isin(classes)]
+    df = df.sort_values("rank").head(top)
+    return df.rename(columns={"rank": "posição", "bairro": "bairro", "classe": "classe", "indice": "índice de risco"})[
+        ["posição", "bairro", "classe", "índice de risco"]].reset_index(drop=True)
+
+
+def ranking_labels(table: pd.DataFrame) -> pd.Series:
+    """Rótulo do gráfico: a classe aparece em texto, não só na cor."""
+    return table["bairro"] + " (" + table["classe"] + ")"
+
+
+def probabilities_frame(item: dict) -> pd.DataFrame:
+    return pd.DataFrame({
+        "classe": [CLASS_TEXT[c] for c in CLASSES],
+        "probabilidade (%)": [100 * item["prob_baixo"], 100 * item["prob_medio"], 100 * item["prob_alto"]]})
+
+
+def cases_frame(detail: dict) -> pd.DataFrame:
+    df = pd.DataFrame(detail["casos_semanais"])
+    if df.empty:
+        return pd.DataFrame({"semana": pd.to_datetime([]), "casos": []})
+    return pd.DataFrame({"semana": pd.to_datetime(df["week_start"]), "casos": df["casos"]})
+
+
+def sensor_frame(items: list[dict]) -> pd.DataFrame:
+    colunas = ["bairro", "semana", "temperatura (°C)", "umidade (%)", "chuva (mm)", "leituras", "bateria mínima (V)"]
+    if not items:
+        return pd.DataFrame(columns=colunas)
+    df = pd.DataFrame(items)
+    return pd.DataFrame({
+        "bairro": df["bairro"], "semana": pd.to_datetime(df["week_start"]), "temperatura (°C)": df["temp_media"],
+        "umidade (%)": df["umid_media"], "chuva (mm)": df["chuva_mm"], "leituras": df["n_leituras"],
+        "bateria mínima (V)": df["bateria_min"]}).sort_values(["bairro", "semana"]).reset_index(drop=True)
+
+
+def sensor_status(frame: pd.DataFrame) -> pd.DataFrame:
+    """Por bairro com leituras: última semana, leituras nessa semana, total e menor bateria."""
+    if frame.empty:
+        return pd.DataFrame(columns=["bairro", "última semana", "leituras na última semana", "semanas com dados",
+                                     "bateria mínima (V)"])
+    linhas = []
+    for bairro, g in frame.groupby("bairro"):
+        ultima = g.sort_values("semana").iloc[-1]
+        linhas.append({"bairro": bairro, "última semana": format_date(ultima["semana"]),
+                       "leituras na última semana": int(ultima["leituras"]), "semanas com dados": len(g),
+                       "bateria mínima (V)": g["bateria mínima (V)"].min()})
+    return pd.DataFrame(linhas)
+
+
+def sensor_is_test(source: str | None) -> bool:
+    return (source or "").strip().lower() in SENSOR_TEST_SOURCES
+
+
+def model_comparison_table(info: dict) -> pd.DataFrame:
+    """RandomForest x persistência na validação e no teste (F1-macro e recall da classe alto)."""
+    val, teste = info["validation_metrics"], info["test_metrics"]
+
+    def fmt(v):
+        return "—" if v is None else f"{v:.3f}"
+
+    return pd.DataFrame([
+        {"métrica": "F1-macro", "RandomForest (validação)": fmt(val.get("f1_macro")),
+         "Persistência (validação)": fmt(val.get("persistencia_f1_macro")),
+         "RandomForest (teste)": fmt(teste.get("f1_macro")), "Persistência (teste)": fmt(teste.get("persistencia_f1_macro"))},
+        {"métrica": "Recall da classe alto", "RandomForest (validação)": fmt(val.get("recall_alto")),
+         "Persistência (validação)": fmt(val.get("persistencia_recall_alto")),
+         "RandomForest (teste)": fmt(teste.get("recall_alto")),
+         "Persistência (teste)": fmt(teste.get("persistencia_recall_alto"))},
+        {"métrica": "AUC macro (one-vs-rest)", "RandomForest (validação)": fmt(val.get("auc_macro")),
+         "Persistência (validação)": "—", "RandomForest (teste)": fmt(teste.get("auc_macro")),
+         "Persistência (teste)": "—"},
+    ])
+
+
+def difference_sentence(info: dict) -> str:
+    teste = info["test_metrics"]
+    inf, sup = teste["f1_diff_ic95"]
+    dif = teste["f1_macro"] - teste["persistencia_f1_macro"]
+    exclui_zero = inf > 0 or sup < 0
+    leitura = ("O intervalo não inclui zero, mas a vantagem é pequena e vem de uma janela de só 26 semanas."
+               if exclui_zero else "O intervalo inclui zero: não há evidência estatística de que o modelo supere a persistência.")
+    return (f"No teste, a diferença de F1-macro entre o RandomForest e a persistência é {dif:+.3f}, com intervalo de "
+            f"confiança de 95% (bootstrap por blocos de semanas) de [{inf:+.3f}, {sup:+.3f}]. {leitura}")
+
+
+LIMITATIONS = [
+    "O teste tem só 26 semanas (uma estação): o intervalo de confiança mede a incerteza dessa janela, não a "
+    "variação entre épocas do ano.",
+    "As probabilidades do modelo não são calibradas; o índice de risco serve para ordenar bairros, não para "
+    "estimar chances.",
+    "O clima tem pouco sinal: na importância por permutação, temperatura, umidade e chuva ficaram em torno de zero.",
+    "O modelo depende dos casos recentes do próprio bairro (médias móveis, caso atual e média histórica); se os "
+    "casos chegam com atraso, a previsão também atrasa.",
+    "A previsão vale para a semana seguinte à última semana dos dados, não para a semana atual do calendário.",
+    "As leituras do sensor são exibidas, mas não alimentam o modelo.",
+]

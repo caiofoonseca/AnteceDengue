@@ -60,7 +60,9 @@
     "recall_alto": 0.5108695652173914,
     "auc_macro": 0.838091332352423,
     "cv_f1_macro_media_f2_5": 0.6144941147213941,
-    "ajustado_em": "treino (sem validação)"
+    "ajustado_em": "treino (sem validação)",
+    "persistencia_f1_macro": 0.5582742123392598,
+    "persistencia_recall_alto": 0.532608695652174
   },
   "test_metrics": {
     "f1_macro": 0.6106199428711165,
