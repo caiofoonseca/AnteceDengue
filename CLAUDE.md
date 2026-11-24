@@ -63,6 +63,13 @@
 - sensor_readings guarda horários em UTC sem fuso; (station_id, ts) é único, então reenvios do QoS 1 são idempotentes (a primeira gravação prevalece). Leitura inválida é gravada com is_valid = false e invalid_reason; sem timestamp reconhecível (ts nulo) ela não entra na deduplicação.
 - sensor_weekly: média das leituras válidas (todas as estações do bairro, ponderada por leitura), chuva = soma de rainfall_mm, menor tensão de bateria. A agregação apaga e recalcula as semanas afetadas.
 
+## Decisões da API (passo 11)
+- A API nunca chama a saída do modelo de "probabilidade de surto". O campo se chama risk_score e a documentação diz que é um índice de ordenação de 0 a 100, não calibrado.
+- As leituras do sensor são exibidas (/bairros/{bairro}, /sensor/weekly), mas não entram na previsão. /predict recebe features explícitas; não lê o sensor.
+- O modelo é carregado uma vez no lifespan (champion do Registry, com fallback para models/best_model.joblib); se não carregar, a API não sobe e informa o motivo. Aviso em log se a versão do scikit-learn diferir de model_meta.json.
+- Acesso a CSVs e ao banco do sensor fica só em api/repository.py (o passo 13 troca o CSV por Postgres sem mexer nos endpoints). CORS: origens em API_CORS_ORIGINS (padrão: dashboard Streamlit em localhost:8501).
+- URLs `postgresql://` são convertidas para `postgresql+psycopg2://` (o SQLAlchemy 2.1 usaria psycopg 3 por padrão).
+
 ## Registro de uso de IA
 - Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
 

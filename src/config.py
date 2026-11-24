@@ -51,6 +51,10 @@ MQTT_TOPIC = "antecedengue/estacoes/+/leituras"
 MQTT_TOPIC_PATTERN = r"^antecedengue/estacoes/([^/]+)/leituras$"
 STATIONS_PATH = ROOT / "config" / "stations_bairros.json"
 SENSOR_TIMEZONE = "America/Recife"
+PANEL_PATH = DATA_PROCESSED / "panel.csv"
+PREDICTIONS_PATH = DATA_PROCESSED / "predictions_latest.csv"
+API_CORS_ORIGINS = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501").split(",") if o.strip()]
+API_RECENT_WEEKS = 26
 TEMP_RANGE = (-10.0, 60.0)
 HUMIDITY_RANGE = (0.0, 100.0)
 

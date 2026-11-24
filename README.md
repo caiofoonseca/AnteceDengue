@@ -72,3 +72,24 @@ pytest -m integration                                     # teste com Mosquitto 
 ```
 
 `DATABASE_URL` (Postgres em produção) e `MQTT_HOST`/`MQTT_PORT` vêm do `.env`; use `--database-url sqlite:///sensor.db` para testar localmente.
+
+## API (FastAPI)
+
+Pré-requisitos: `models/model_meta.json` e o modelo (champion no MLflow ou `models/best_model.joblib`); para `/predictions/latest`, rode antes `python -m src.predict_batch`.
+
+```powershell
+uvicorn api.main:app --reload          # http://localhost:8000/docs
+```
+
+```powershell
+curl http://localhost:8000/health
+curl http://localhost:8000/model
+curl "http://localhost:8000/predictions/latest?top=5"
+curl "http://localhost:8000/predictions/latest?classe=alto&top=10"
+curl "http://localhost:8000/bairros"
+curl "http://localhost:8000/bairros/boa%20viagem"
+curl "http://localhost:8000/sensor/weekly?bairro=BOA%20VIAGEM&desde=2025-02-01"
+curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" -d "@exemplo_features.json"
+```
+
+`risk_score` é um índice de ordenação de 0 a 100, não calibrado (não é probabilidade de surto). As leituras do sensor são exibidas mas não entram na previsão. Variáveis: `DATABASE_URL` (banco do sensor), `API_CORS_ORIGINS` (origens do dashboard, separadas por vírgula).

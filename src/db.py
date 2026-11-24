@@ -51,8 +51,15 @@ READING_COLUMNS = ("station_id", "ts", "latitude", "longitude", "temperature_c",
                    "rainfall_mm", "battery_voltage", "is_valid", "invalid_reason", "raw_payload")
 
 
+def normalize_database_url(url: str) -> str:
+    """postgresql:// vira postgresql+psycopg2:// (o SQLAlchemy 2.1 usaria psycopg 3 por padrão)."""
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
 def get_engine(url: str | None = None) -> Engine:
-    return create_engine(url or config.DATABASE_URL, future=True)
+    return create_engine(normalize_database_url(url or config.DATABASE_URL), future=True)
 
 
 def init_db(engine: Engine) -> None:
