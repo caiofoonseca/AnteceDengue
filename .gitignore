@@ -235,3 +235,5 @@ mlruns/
 .ipynb_checkpoints/
 mlflow.db
 mlflow.db-journal
+
+.claude/
