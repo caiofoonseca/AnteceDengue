@@ -33,12 +33,14 @@ def show_chart(figura) -> None:
     st.plotly_chart(figura, width="stretch", config={"displayModeBar": False, "scrollZoom": False})
 
 
-def show_api_down(erro: ApiUnavailable) -> None:
-    ui.render(ui.hero(simulated=ui.simulated_source()))
+def show_api_down(erro: ApiUnavailable, com_cabecalho: bool = True) -> None:
+    if com_cabecalho:
+        ui.render(ui.hero(simulated=ui.simulated_source()))
     st.error(f"Não consegui falar com a API em **{erro.base_url}** ({erro.motivo}).")
     st.markdown(
         "Suba a API com `uvicorn api.main:app` ou ajuste a variável de ambiente `API_URL` com o endereço certo, "
         "e recarregue esta página.")
+    ui.render(ui.footer())
     st.stop()
 
 
@@ -331,7 +333,8 @@ def main() -> None:
         with abas[4]:
             tab_modelo(info)
     except ApiUnavailable as erro:
-        show_api_down(erro)
+        show_api_down(erro, com_cabecalho=False)
+    ui.render(ui.footer())
 
 
 main()

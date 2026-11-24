@@ -185,3 +185,19 @@ def sensor_status_view(estado: pd.DataFrame) -> pd.DataFrame:
 def comparison_table_view(tabela: pd.DataFrame) -> pd.DataFrame:
     """Tabela de métricas com vírgula decimal (os valores já vêm formatados como texto com ponto)."""
     return tabela.apply(lambda col: col.map(lambda v: str(v).replace(".", ",")) if col.name != "métrica" else col)
+
+
+def api_docs_url() -> str:
+    """Endereço da documentação da API que o navegador consegue abrir (no compose, a API interna é http://api:8000)."""
+    return os.getenv("API_PUBLIC_URL", "http://localhost:8000").rstrip("/") + "/docs"
+
+
+def footer() -> str:
+    return ('<div class="site-footer" role="contentinfo">'
+            '<p><strong>Fontes dos dados.</strong> Casos: Portal de Dados Abertos do Recife (licença ODbL). '
+            'Temperatura e umidade: InfoDengue. Chuva: Open-Meteo, estimada por reanálise (ERA5), não é medição de estação.</p>'
+            '<p><strong>Aviso.</strong> O índice de risco é um índice de ordenação, não probabilidade de surto: serve para '
+            'comparar bairros entre si e não é calibrado. Não é diagnóstico nem monitoramento em tempo real. '
+            'As leituras do sensor não alimentam o modelo.</p>'
+            f'<p><a href="{esc(api_docs_url())}" target="_blank" rel="noopener noreferrer">Documentação da API</a></p>'
+            '</div>')

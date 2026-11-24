@@ -338,3 +338,26 @@ def test_tabelas_de_exibicao_das_outras_abas():
     assert visao.loc[0, "RandomForest (teste)"] == "0,611" and visao.loc[0, "métrica"] == "F1-macro"
     estado = ui.sensor_status_view(data.sensor_status(data.sensor_frame(SENSOR_ITEMS)))
     assert list(estado.columns)[0] == "Bairro" and estado.loc[0, "Bateria mínima (V)"] == "3,70"
+
+
+def test_rodape_com_fontes_aviso_e_link_da_api(monkeypatch):
+    from app import ui
+
+    monkeypatch.setenv("API_PUBLIC_URL", "http://localhost:8000/")
+    rodape = ui.footer()
+    for trecho in ("Portal de Dados Abertos do Recife", "InfoDengue", "Open-Meteo", "não probabilidade de surto",
+                   "http://localhost:8000/docs", "não alimentam o modelo"):
+        assert trecho in rodape
+    assert chr(10) not in rodape
+
+
+def test_rodape_aparece_no_dashboard_e_com_a_api_fora_do_ar(monkeypatch):
+    instalar_api(monkeypatch)
+    html = " ".join(e.value for e in rodar().markdown if isinstance(e.value, str))
+    assert "Fontes dos dados" in html and "Documentação da API" in html
+    st_limpar = __import__("streamlit").cache_data.clear
+    st_limpar()
+    instalar_api(monkeypatch, fora_do_ar=True)
+    fora = rodar()
+    html = " ".join(e.value for e in fora.markdown if isinstance(e.value, str))
+    assert "Fontes dos dados" in html and "AnteceDengue" in html and len(fora.error) == 1

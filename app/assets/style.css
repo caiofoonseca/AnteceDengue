@@ -101,3 +101,17 @@ p, li, label, h1, h2, h3, h4, td, th, [data-baseweb="tab"] p, [data-testid="stMa
 .bar { height: 0.55rem; margin: 0.35rem 0 0.35rem 2.1rem; background: #efece4; border-radius: 999px; overflow: hidden; }
 .bar-fill { height: 100%; border-radius: 999px; }
 .top-class { margin-left: 2.1rem; }
+
+.site-footer {
+  margin-top: 2.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; line-height: 1.5;
+}
+.site-footer p { margin: 0 0 0.4rem 0; }
+.site-footer a { color: var(--accent); font-weight: 650; }
+
+@media (max-width: 720px) {
+  .hero { padding: 1.1rem; }
+  .hero-title { font-size: 1.6rem; }
+  .kpi-value { font-size: 1.8rem; }
+}
+
+[data-testid="stAlert"] p { font-size: 1rem; }
