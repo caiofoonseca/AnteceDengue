@@ -56,6 +56,13 @@
 - `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100 para ordenar bairros; não é probabilidade.
 - As colunas de features da inferência são exatamente as de `model_meta.json`, na mesma ordem; se faltar alguma, a função falha com erro claro.
 
+## Decisões do sensor (passo 10: ingestão MQTT)
+- As leituras do sensor NÃO alimentam o modelo; servem ao dashboard e à demonstração da infraestrutura.
+- A semana das leituras é calculada no fuso America/Recife (domingo a sábado), embora o timestamp chegue em UTC. Uma leitura de sábado 23:30 em Recife (domingo 02:30 UTC) pertence à semana que termina nesse sábado.
+- A relação estação -> bairro vem de config/stations_bairros.json (station_id para bairro, nomes oficiais do painel); `src/stations.py` valida os bairros contra o painel. Estação sem bairro é ignorada na agregação, com aviso.
+- sensor_readings guarda horários em UTC sem fuso; (station_id, ts) é único, então reenvios do QoS 1 são idempotentes (a primeira gravação prevalece). Leitura inválida é gravada com is_valid = false e invalid_reason; sem timestamp reconhecível (ts nulo) ela não entra na deduplicação.
+- sensor_weekly: média das leituras válidas (todas as estações do bairro, ponderada por leitura), chuva = soma de rainfall_mm, menor tensão de bateria. A agregação apaga e recalcula as semanas afetadas.
+
 ## Registro de uso de IA
 - Após cada passo, acrescentar uma entrada em docs/USO_DE_IA.md (data, passo, o que o Claude Code fez, o que o humano verificou). O grupo entrega uma declaração de uso de IA toda semana aos orientadores.
 

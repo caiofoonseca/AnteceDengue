@@ -59,3 +59,16 @@ python -m src.predict_batch --no-registry # só models/best_model.joblib
 ```
 
 Grava `data/processed/predictions_latest.csv` (um bairro por linha, ordenado por `rank`, 1 = maior risco) com a previsão da semana seguinte à última semana dos dados. `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100, não uma probabilidade. A previsão vale para a última semana presente nos dados (hoje 2025-08-17), os casos chegam dos CSVs anuais com atraso e o sensor não alimenta o modelo.
+
+## Sensor: ingestor MQTT e agregação semanal
+
+As leituras do sensor (ESP32) NÃO alimentam o modelo; servem ao dashboard e à demonstração. Estação -> bairro em `config/stations_bairros.json` (edite com os `station_id` reais; os bairros precisam existir no painel).
+
+```powershell
+python -m src.ingest_mqtt --host localhost --port 1883   # assina antecedengue/estacoes/+/leituras (QoS 1); Ctrl+C encerra
+python -m src.sensor_agg                                  # recalcula sensor_weekly (semana domingo a sábado em America/Recife)
+python scripts/demo_sensor.py                             # demonstração sem broker (SQLite em memória)
+pytest -m integration                                     # teste com Mosquitto real (pulado se não houver broker)
+```
+
+`DATABASE_URL` (Postgres em produção) e `MQTT_HOST`/`MQTT_PORT` vêm do `.env`; use `--database-url sqlite:///sensor.db` para testar localmente.

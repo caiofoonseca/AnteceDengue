@@ -48,6 +48,11 @@ EXP_TUNING = "03-otimizacao-hiperparametros"
 MLFLOW_MODEL_NAME = "antecedengue-risk-classifier"
 
 MQTT_TOPIC = "antecedengue/estacoes/+/leituras"
+MQTT_TOPIC_PATTERN = r"^antecedengue/estacoes/([^/]+)/leituras$"
+STATIONS_PATH = ROOT / "config" / "stations_bairros.json"
+SENSOR_TIMEZONE = "America/Recife"
+TEMP_RANGE = (-10.0, 60.0)
+HUMIDITY_RANGE = (0.0, 100.0)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://antecedengue:antecedengue@localhost:5432/antecedengue"
