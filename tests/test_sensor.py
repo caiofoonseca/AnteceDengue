@@ -278,7 +278,8 @@ def broker_disponivel() -> bool:
 
 
 @pytest.mark.integration
-def test_integracao_com_mosquitto(tmp_path):
+def test_integracao_com_mosquitto(tmp_path, monkeypatch):
+    """Usa um tópico exclusivo (que o ingestor do compose não assina) e um SQLite temporário."""
     if not broker_disponivel():
         pytest.skip(f"sem broker MQTT em {config.MQTT_HOST}:{config.MQTT_PORT}")
     import paho.mqtt.client as mqtt
@@ -287,8 +288,12 @@ def test_integracao_com_mosquitto(tmp_path):
     eng = create_engine(f"sqlite:///{(tmp_path / 'int.db').as_posix()}", connect_args={"check_same_thread": False})
     init_db(eng)
     estacao = f"teste-{int(time.time())}"
-    topic = f"antecedengue/estacoes/{estacao}/leituras"
-    cliente = build_client(eng, client_id=f"teste-ingestor-{estacao}")
+    prefixo = f"antecedengue-teste/{estacao}/estacoes"
+    monkeypatch.setattr(config, "MQTT_TOPIC", f"{prefixo}/+/leituras")
+    monkeypatch.setattr(config, "MQTT_TOPIC_PATTERN", rf"^{prefixo}/([^/]+)/leituras$")
+    topic = f"{prefixo}/{estacao}/leituras"
+    id_ingestor = f"teste-ingestor-{estacao}"
+    cliente = build_client(eng, client_id=id_ingestor)
     cliente.connect(config.MQTT_HOST, config.MQTT_PORT)
     cliente.loop_start()
     pub = mqtt.Client(CallbackAPIVersion.VERSION2, client_id=f"teste-pub-{estacao}")
@@ -306,8 +311,12 @@ def test_integracao_com_mosquitto(tmp_path):
             break
         time.sleep(0.2)
     pub.loop_stop()
+    pub.disconnect()
     cliente.loop_stop()
     cliente.disconnect()
+    limpeza = mqtt.Client(CallbackAPIVersion.VERSION2, client_id=id_ingestor, clean_session=True)
+    limpeza.connect(config.MQTT_HOST, config.MQTT_PORT)
+    limpeza.disconnect()
     with eng.connect() as conn:
         linhas = conn.execute(select(sensor_readings)).mappings().all()
     assert len(linhas) == 3
