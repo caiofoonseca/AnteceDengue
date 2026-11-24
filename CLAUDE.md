@@ -99,3 +99,13 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Leituras do sensor são exibidas como monitoramento de microclima e não alimentam o modelo. Se vierem de dados simulados/de teste, o dashboard avisa (variável `SENSOR_FONTE`, pois a API não distingue).
 - Mapa: limites oficiais dos bairros do portal (ODbL), `app/assets/bairros.geojson`; se faltar ou não cobrir os bairros, cai para ranking em barras com aviso. Paleta de uma só matiz (Oranges), classe sempre também em texto.
 - A persistência na validação fica em `models/model_meta.json` (`persistencia_f1_macro`, `persistencia_recall_alto`) para a aba Modelo.
+
+## Decisões do Docker Compose (passo 13)
+- O `mlflow.db` local NÃO é montado nos containers (guarda caminhos absolutos do Windows nos artefatos). O MLflow do compose tem backend SQLite e artefatos em volume próprio (`mlflow-data`), com `--serve-artifacts`, e é alimentado por `scripts/seed_mlflow.py` (perfil `init`).
+- O seed registra o champion existente (`models/best_model.joblib`) e as métricas do experimento 03 sem reexecutar o teste (os números do teste são só copiados de `model_meta.json`). É idempotente: se o alias `champion` já existe, não faz nada (`--force` registra outra versão). O container `trainer` (perfil `train`) roda só os experimentos 01, 02 e 03, nunca `--final`, e grava os relatórios em volume próprio, não no repositório.
+- Segredos e configuração vão em `.env` (ignorado pelo git); `.env.example` é versionado. A senha do Postgres entra numa URL, então use só letras e números. Mosquitto anônimo (`allow_anonymous true`) é só para desenvolvimento.
+- Uma imagem só (`Dockerfile`, python:3.11-slim, usuário sem privilégios), com `requirements-runtime.txt` e scikit-learn fixado em 1.9.1 (igual a `model_meta.json`; um teste confere). `models/` e `data/processed/` entram na API por montagem somente leitura.
+- Portas: Postgres e MLflow só em 127.0.0.1. O Postgres do host já ocupava a 5432 nesta máquina, então a porta publicada é `POSTGRES_HOST_PORT` (padrão 5433). Dentro da rede do compose continua 5432.
+- MLflow com `--workers 1` e `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false`: com os padrões ele subia vários workers e consumidores de jobs e passava de 2,4 GiB; assim fica perto de 370 MiB.
+- O dashboard lê `SENSOR_FONTE` do ambiente do compose; com o simulador, suba com `SENSOR_FONTE=simulado docker compose --profile demo up -d` (um serviço de perfil não consegue mudar o ambiente de outro). `scripts/sim_publisher.py` é ferramenta de desenvolvimento e publica só dados simulados.
+- A API carrega o modelo uma vez na partida: depois de rodar o seed pela primeira vez, reinicie a API (`docker compose restart api`), senão ela fica no fallback do joblib.

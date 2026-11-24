@@ -1,0 +1,183 @@
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: antecedengue-app:latest
+  restart: unless-stopped
+
+x-db-url: &db-url postgresql://${POSTGRES_USER:-antecedengue}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@postgres:5432/${POSTGRES_DB:-antecedengue}
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h 127.0.0.1 -t '$$SYS/broker/uptime' -C 1 -W 3 -i healthcheck >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks: [dados]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-antecedengue}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-antecedengue}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [dados]
+    restart: unless-stopped
+
+  mlflow:
+    <<: *app
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+      --allowed-hosts "*"
+      --workers 1
+    environment:
+      MLFLOW_SERVER_ENABLE_JOB_EXECUTION: "false"
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [dados]
+
+  ingestor:
+    <<: *app
+    command: ["python", "-m", "src.ingest_mqtt"]
+    environment:
+      DATABASE_URL: *db-url
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0 if b'ingest_mqtt' in open('/proc/1/cmdline','rb').read() else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks: [dados]
+
+  api:
+    <<: *app
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DATABASE_URL: *db-url
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      API_CORS_ORIGINS: http://localhost:8501,http://127.0.0.1:8501
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+      - ./data/processed:/app/data/processed:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [dados, web]
+
+  dashboard:
+    <<: *app
+    command: ["streamlit", "run", "app/dashboard.py", "--server.port=8501", "--server.address=0.0.0.0",
+              "--server.headless=true", "--browser.gatherUsageStats=false"]
+    environment:
+      API_URL: http://api:8000
+      SENSOR_FONTE: ${SENSOR_FONTE:-real}
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [web]
+
+  sensor-sim:
+    <<: *app
+    profiles: ["demo"]
+    command: ["python", "scripts/sim_publisher.py", "--host", "mosquitto", "--backfill-dias", "21", "--intervalo", "10"]
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      ingestor:
+        condition: service_healthy
+    networks: [dados]
+
+  seed-mlflow:
+    <<: *app
+    profiles: ["init"]
+    restart: "no"
+    command: ["python", "scripts/seed_mlflow.py"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./models:/app/models:ro
+      - ./reports:/app/reports:ro
+      - ./data/processed:/app/data/processed:ro
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks: [dados]
+
+  trainer:
+    <<: *app
+    profiles: ["train"]
+    restart: "no"
+    command: ["sh", "-c", "python -m src.train --exp 01 && python -m src.train --exp 02 && python -m src.train --exp 03"]
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    volumes:
+      - ./data/processed:/app/data/processed:ro
+      - trainer-reports:/app/reports
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks: [dados]
+
+networks:
+  dados:
+  web:
+
+volumes:
+  mosquitto-data:
+  postgres-data:
+  mlflow-data:
+  trainer-reports:

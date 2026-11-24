@@ -103,3 +103,21 @@ streamlit run app/dashboard.py
 Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`real` por padrão; com `simulado` ou `teste` a aba Sensor avisa que os dados não são de estações reais). Se a API estiver fora do ar, o dashboard mostra o endereço tentado.
 
 Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana base e a semana prevista no topo de cada aba; não é monitoramento em tempo real nem diagnóstico. O mapa usa os limites oficiais dos bairros (`app/assets/bairros.geojson`, ver `docs/DADOS.md`) e os tiles do mapa precisam de internet. Para refazer o GeoJSON: `python scripts/build_bairros_geojson.py`. Para gravar a persistência da validação em `models/model_meta.json` sem retreinar: `python scripts/patch_meta_persistencia.py` (novas execuções de `src.final` já gravam).
+
+## Docker Compose (pilha completa, sem Airflow)
+Serviços: mosquitto (1883), postgres, mlflow (5000), ingestor MQTT, api (8000) e dashboard (8501). Ordem de uso:
+```
+cp .env.example .env                       # edite POSTGRES_PASSWORD (só letras e números)
+docker compose up --build -d               # sobe tudo e espera os healthchecks
+docker compose --profile init run --rm seed-mlflow   # registra o champion no MLflow do compose (uma vez)
+docker compose restart api                 # a API passa a carregar o modelo do Registry
+docker compose ps                          # todos devem estar healthy
+```
+Pré-requisito: `models/` e `data/processed/` gerados (a API os monta somente leitura).
+
+- Demonstração com leituras simuladas: `SENSOR_FONTE=simulado docker compose --profile demo up -d`. Depois, `docker compose exec api python -m src.sensor_agg` agrega as leituras por semana e bairro. Os dados são simulados e o dashboard avisa.
+- Reexecutar os experimentos 01, 02 e 03 (nunca `--final`): `docker compose --profile train run --rm trainer` (relatórios no volume `trainer-reports`).
+- Teste de integração do ingestor contra o Mosquitto do compose: `MQTT_HOST=localhost pytest -m integration`.
+- Postgres do compose em `127.0.0.1:5433` (variável `POSTGRES_HOST_PORT`); MLflow em http://localhost:5000.
+- Logs: `docker compose logs -f ingestor`. Parar: `docker compose down` (mantém os dados). Apagar também os volumes (banco, MLflow, Mosquitto): `docker compose down -v`.
+- O Mosquitto aceita conexões anônimas (só para desenvolvimento). A pilha usa cerca de 0,8 GiB no total; nenhum serviço passa de 1 GiB.
