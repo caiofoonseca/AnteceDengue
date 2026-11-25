@@ -139,3 +139,9 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Testes nunca acessam a internet (a API é simulada com mocks). `SENSOR_FONTE` padrão é `open-meteo`.
 - DAG `antecedengue_semanal`: a última tarefa (`exporta_csv_sensor`) gera o CSV; no compose, `docker compose --profile export run --rm export-sensor`.
 
+## Decisões da projeção sazonal 2026
+- Orientação do professor: treino até 2024, teste em 2025 (já coberto pelo split semanal atual) e projeção sazonal mensal para 2026. É projeção de padrão sazonal, nunca previsão verificada; o texto da API e do dashboard diz isso (campo `aviso` fixo).
+- Código em `src/projecao.py` (`python -m src.projecao`) e `src/projecao_figuras.py`. Mês da semana = mês do domingo de início; só meses completos (último: 2025-07); casos/mês = casos_brutos / domingos_do_mês * 52/12. Limiares q0.60/q0.85 sobre os valores bairro x mês do treino (`labels.fit_thresholds`). Método escolhido só pelo Backtest A (treino até 2023 -> 2024); o Backtest B (até 2024 -> 2025, jan a jul) é calculado uma vez e não participa da escolha. Todo método recusa histórico com o ano projetado (ValueError).
+- Experimento MLflow `05-projecao-sazonal` (o 04 já era o monitoramento semanal). Saídas versionadas (exceção no .gitignore): `data/processed/projecao_2026_mensal.csv` e `projecao_2026_meta.json`; relatório em `reports/projecao_sazonal.md`.
+- Passo 0 (25/11/2026): portal sem dados novos além de ago/2025 (tamanhos idênticos); 2013 e 2014 continuam fora. Painel inalterado, métricas do modelo semanal NÃO recalculadas.
+- Limitações: anos epidêmicos mudam a magnitude; sem clima futuro; ago a dez/2025 não entram (cauda), então há um degrau entre jul e ago na curva de 2026; confiança = consistência da classe entre anos, não intervalo estatístico.

@@ -84,3 +84,7 @@ Projeto AnteceDengue (G15), CESAR School. Ferramenta: Claude Code (modelo Claude
 ### 25/11/2026: estação simulada (Open-Meteo)
 
 O Claude Code trocou a fonte do publicador MQTT do ESP32 para a API Open-Meteo (`src/api_publisher.py`, `src/export_sensor_csv.py`), atualizou os textos e escreveu os testes correspondentes.
+
+### 25/11/2026: projeção sazonal 2026
+
+O Claude Code implementou a projeção sazonal mensal (`src/projecao.py`, endpoint `/projecao/2026`, aba "Projeção 2026" do dashboard, figuras e testes) e rodou os backtests A e B.

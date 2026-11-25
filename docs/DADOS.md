@@ -46,6 +46,13 @@ python scripts/build_clima.py --sem-download   # só reprocessa os brutos já em
 ```
 Brutos ficam em `data/raw/clima/` (fora do git). Para refazer a validação com o INMET: `python -c "from src import data_clima as c; [c.download_inmet_year(y) for y in range(2015, 2022)]"` (cada zip tem ~100 MB).
 
+## Projeção sazonal 2026 (dados e verificação de 25/11/2026)
+
+- Orientação do professor: treino até 2024 e teste em 2025 (o split semanal já cobre isso: treino até jul/2024, validação ago/2024 a fev/2025, teste fev a ago/2025) e uma projeção sazonal mensal para 2026.
+- Verificação no portal: não há recurso de 2026; os arquivos de 2013, 2014 e 2025 têm o mesmo tamanho dos já baixados, então não há dados novos. Painel antes e depois: 2015-01-04 a 2025-08-17 (inalterado; métricas do modelo semanal não recalculadas).
+- 2013 (1.293 casos) e 2014 (374, termina em julho) continuam fora: série incompleta e em outra escala.
+- Os CSVs `data/processed/projecao_2026_mensal.csv` e `projecao_2026_meta.json` são projeção do padrão sazonal, não previsão verificada. Os dados reais usados vão até o último mês completo (julho/2025). Não entram clima futuro nem as leituras da estação simulada.
+
 ## Estação simulada (Open-Meteo via MQTT)
 
 **Decisão (25/11/2026, orientação do professor):** o projeto não usa ESP32 nem sensor físico. A aquisição é uma estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT.

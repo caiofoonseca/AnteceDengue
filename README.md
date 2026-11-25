@@ -83,6 +83,20 @@ pytest -m integration                                     # teste com Mosquitto 
 
 `DATABASE_URL` (Postgres em produção) e `MQTT_HOST`/`MQTT_PORT` vêm do `.env`; use `--database-url sqlite:///sensor.db` para testar localmente.
 
+## Projeção sazonal de 2026 (por bairro e mês)
+
+Por orientação do professor, além da previsão semanal (treino até jul/2024, validação ago/2024 a fev/2025, teste fev a ago/2025), o projeto traz uma **projeção sazonal mensal de risco para 2026**. Não existem casos reais de 2026: é a projeção do **padrão sazonal do histórico**, não uma previsão verificada e não é número exato de casos. Não captura surtos e não usa clima futuro. O modelo semanal, o teste final e as métricas já reportadas não mudam.
+
+```powershell
+python -m src.projecao            # backtests A e B, escolha do método, CSV, metadados, relatório e MLflow (05-projecao-sazonal)
+python -m src.projecao_figuras    # figuras em reports/figuras/projecao_*.png
+```
+
+- Mês de uma semana = mês do domingo de início; só meses completos entram (último: julho/2025). Casos/mês padronizados: `casos_brutos / domingos_do_mês * 52/12`.
+- Classes 0/1/2 com limiares mensais q0.60 e q0.85 ajustados só no histórico real. Candidatos: climatologia, mesmo mês do último ano (baseline), média ponderada por recência (meia-vida de 1, 2 e 3 anos) e RandomForest só com calendário e histórico. O método é escolhido pelo **Backtest A** (treino até 2023, projeta 2024); o **Backtest B** (treino até 2024, projeta jan a jul/2025) é calculado uma vez e só informa quanto confiar.
+- Saídas versionadas: `data/processed/projecao_2026_mensal.csv` (bairro, mes, casos_esperados, classe_risco, p25, p75, confianca, metodo, ultima_data_real_usada) e `projecao_2026_meta.json`. Relatório com as tabelas de métricas: `reports/projecao_sazonal.md`.
+- API: `GET /projecao/2026?bairro=&mes=` (campo `aviso` fixo). Dashboard: aba "Projeção 2026" (aviso no topo, seletor de mês, mapa, ranking, curva sazonal da cidade com faixa p25 a p75 e métricas do Backtest B).
+
 ## API (FastAPI)
 
 Pré-requisitos: `models/model_meta.json` e o modelo (champion no MLflow ou `models/best_model.joblib`); para `/predictions/latest`, rode antes `python -m src.predict_batch`.
@@ -110,7 +124,7 @@ O dashboard consome só a API. Em dois terminais, com o ambiente virtual ativo:
 uvicorn api.main:app --port 8000
 streamlit run app/dashboard.py
 ```
-Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`open-meteo` por padrão: a aba Sensor mostra o selo "estação simulada, dados Open-Meteo"; com `simulado`, `teste` ou `sintetico` avisa que os dados são sintéticos). Se a API estiver fora do ar, o dashboard mostra o endereço tentado. O acesso exige login: defina `DASHBOARD_USER` e `DASHBOARD_PASSWORD` no `.env` (sem esses valores, ou com a senha de exemplo, o acesso fica fechado). O login protege só a interface do dashboard; a API (porta 8000) tem as regras dela. A identidade visual (logo em `app/assets/logo.svg`, tema em `.streamlit/config.toml` e `app/assets/style.css`) não usa fontes nem imagens externas.
+Abre em http://localhost:8501 com seis abas: Mapa de risco, Ranking, Bairro, Projeção 2026, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`open-meteo` por padrão: a aba Sensor mostra o selo "estação simulada, dados Open-Meteo"; com `simulado`, `teste` ou `sintetico` avisa que os dados são sintéticos). Se a API estiver fora do ar, o dashboard mostra o endereço tentado. O acesso exige login: defina `DASHBOARD_USER` e `DASHBOARD_PASSWORD` no `.env` (sem esses valores, ou com a senha de exemplo, o acesso fica fechado). O login protege só a interface do dashboard; a API (porta 8000) tem as regras dela. A identidade visual (logo em `app/assets/logo.svg`, tema em `.streamlit/config.toml` e `app/assets/style.css`) não usa fontes nem imagens externas.
 
 Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana base e a semana prevista no topo de cada aba; não é monitoramento em tempo real nem diagnóstico. O mapa usa os limites oficiais dos bairros (`app/assets/bairros.geojson`, ver `docs/DADOS.md`) e os tiles do mapa precisam de internet. Para refazer o GeoJSON: `python scripts/build_bairros_geojson.py`. Para gravar a persistência da validação em `models/model_meta.json` sem retreinar: `python scripts/patch_meta_persistencia.py` (novas execuções de `src.final` já gravam).
 

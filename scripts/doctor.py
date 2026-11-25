@@ -18,7 +18,7 @@ from setup_env import GERADORES, e_exemplo, parse_env
 ARQUIVOS_MINIMOS = [
     "models/best_model.joblib", "models/model_meta.json", "data/processed/panel.csv",
     "data/processed/clima_semanal.csv", "data/processed/predictions_latest.csv", "app/assets/bairros.geojson",
-    "config/stations_bairros.json", "docker-compose.yml", ".env.example",
+    "config/stations_bairros.json", "data/processed/projecao_2026_mensal.csv", "docker-compose.yml", ".env.example",
 ]
 PORTAS = {"POSTGRES_HOST_PORT": "5433", "API_HOST_PORT": "8000", "DASHBOARD_HOST_PORT": "8501",
           "MLFLOW_HOST_PORT": "5000", "MQTT_HOST_PORT": "1883"}
