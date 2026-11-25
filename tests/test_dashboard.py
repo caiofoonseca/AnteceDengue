@@ -48,6 +48,30 @@ SENSOR_ITEMS = [
      "n_leituras": 12, "bateria_min": 3.7}]
 
 
+AVISO_PROJECAO = "Projeção sazonal baseada no histórico até 17/08/2025; não há dados reais de 2026 para verificação."
+
+
+def projection_payload(bairros=BAIRROS):
+    itens = []
+    for i, b in enumerate(bairros):
+        for m in range(1, 13):
+            casos = round(1.0 + (i % 9) * (1 + abs(7 - m)) / 3, 2)
+            classe = 2 if casos > 6.5 else (1 if casos > 1.1 else 0)
+            itens.append({"bairro": b, "mes": f"2026-{m:02d}", "casos_esperados": casos, "classe_risco": classe,
+                          "p25": 0.5, "p75": casos + 1, "confianca": ("alta", "media", "baixa")[i % 3],
+                          "metodo": "recencia_h1", "ultima_data_real_usada": "2025-08-17"})
+    metricas = {"f1_macro": 0.595, "recall_alto": 0.5, "spearman_bairros": 0.586, "mae_casos_mes": 3.08,
+                "pico_acerto": 0.0, "pico_real": 3, "pico_previsto": 7}
+    base = dict(metricas, f1_macro=0.518, recall_alto=None, pico_acerto=1.0)
+    curva = [{"mes": f"2026-{m:02d}", "casos_esperados": 100.0 + 40 * (8 - abs(7 - m)), "p25": 80.0, "p75": 300.0}
+             for m in range(1, 13)]
+    return {"aviso": AVISO_PROJECAO, "metodo": "recencia_h1", "ultima_data_real_usada": "2025-08-17",
+            "ultimo_mes_completo": "2025-07", "limiares_casos_mes": [1.08, 6.5], "total": len(itens), "items": itens,
+            "curva_cidade": curva, "historico_cidade": {"2024": [150.0] * 12, "2025": [200.0] * 7 + [None] * 5},
+            "backtest_b": {"treino_ate": 2024, "projeta": 2025, "metodo": "recencia_h1", "escolhido": metricas,
+                           "baseline_mesmo_mes_ultimo_ano": base, "nota": "Calculado uma vez."}}
+
+
 class FakeResponse:
     def __init__(self, status, corpo):
         self.status_code = status
@@ -58,7 +82,7 @@ class FakeResponse:
         return self._corpo
 
 
-def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=False):
+def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=False, projecao=True):
     chamadas = []
 
     def falso_get(url, params=None, timeout=None):
@@ -84,6 +108,10 @@ def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=Fa
                      enumerate(pd.date_range("2025-02-23", periods=26, freq="7D"))]
             return FakeResponse(200, {"bairro": nome, "previsao": previsao, "casos_semanais": casos,
                                       "sensor_semanal": [], "nota": None})
+        if caminho == "/projecao/2026":
+            if not projecao:
+                return FakeResponse(503, {"detail": "Projeção não encontrada."})
+            return FakeResponse(200, projection_payload())
         if caminho == "/sensor/weekly":
             return FakeResponse(200, {"total": len(sensor), "items": sensor, "nota": "x"})
         return FakeResponse(404, {"detail": "?"})
@@ -214,7 +242,7 @@ def test_dashboard_caminho_feliz(monkeypatch):
     instalar_api(monkeypatch)
     at = rodar()
     assert not at.exception and not at.error
-    assert [t.label for t in at.tabs] == ["Mapa de risco", "Ranking", "Bairro", "Sensor", "Modelo"]
+    assert [t.label for t in at.tabs] == ["Mapa de risco", "Ranking", "Bairro", "Projeção 2026", "Sensor", "Modelo"]
     avisos = " ".join(i.value for i in at.info)
     assert "17/08/2025" in avisos and "24/08/2025" in avisos and "não é monitoramento em tempo real" in avisos
     assert len(at.get("plotly_chart")) >= 5
@@ -276,7 +304,7 @@ def test_sem_predicoes_a_dashboard_continua(monkeypatch):
     at = rodar()
     assert not at.exception
     assert any("Arquivo de previsões não encontrado" in w.value for w in at.warning)
-    assert len(at.tabs) == 5
+    assert len(at.tabs) == 6
 
 
 def test_sem_geojson_cai_no_ranking(monkeypatch):
@@ -480,3 +508,40 @@ def test_aba_sensor_explica_a_estacao_simulada_e_credita_a_open_meteo(monkeypatc
     assert "Não há sensor físico" in textos and "Weather data by Open-Meteo.com" in textos
     assert "não alimentam o modelo" in textos.lower() or "não alimentam o modelo de risco" in textos.lower()
     assert not any("sintéticos" in w.value for w in at.warning)
+
+
+def test_aba_projecao_mostra_aviso_seletor_e_backtest(monkeypatch):
+    instalar_api(monkeypatch)
+    at = rodar()
+    assert not at.exception
+    assert any(AVISO_PROJECAO in w.value and "não uma previsão" in w.value for w in at.warning)
+    seletor = next(sb for sb in at.selectbox if sb.key == "proj_mes")
+    assert len(seletor.options) == 12 and seletor.value == "2026-07"
+    html = " ".join(e.value for e in at.markdown if isinstance(e.value, str))
+    assert "Quanto confiar? Backtest B" in html and "Ranking do mês" in html and "Julho de 2026" in html
+    seletor.select("2026-03").run()
+    assert not at.exception
+    html = " ".join(e.value for e in at.markdown if isinstance(e.value, str))
+    assert "Março de 2026" in html
+
+
+def test_aba_projecao_sem_arquivo_explica(monkeypatch):
+    instalar_api(monkeypatch, projecao=False)
+    at = rodar()
+    assert not at.exception and len(at.tabs) == 6
+    assert any("python -m src.projecao" in i.value for i in at.info)
+    assert any("Projeção não encontrada" in w.value for w in at.warning)
+
+
+def test_funcoes_da_projecao():
+    payload = projection_payload()
+    frame = data.projection_frame(payload)
+    assert data.projection_months(frame)[0] == "2026-01" and len(frame) == len(BAIRROS) * 12
+    assert data.peak_month(payload) == "2026-07" and data.month_label("2026-07") == "Julho de 2026"
+    ranking = data.projection_ranking(frame, "2026-07", 5)
+    assert len(ranking) == 5 and list(ranking["casos esperados/mês"]) == sorted(ranking["casos esperados/mês"], reverse=True)
+    tabela = data.backtest_rows(payload["backtest_b"])
+    assert tabela.iloc[1]["baseline (mesmo mês do último ano)"] == "n/d"
+    assert "errou" in tabela.iloc[-1]["método escolhido"] and tabela.iloc[-1]["baseline (mesmo mês do último ano)"] == "acertou"
+    assert data.projection_frame({}).empty
+

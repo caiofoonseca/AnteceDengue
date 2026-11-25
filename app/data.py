@@ -198,3 +198,84 @@ def comparison_long(info: dict) -> pd.DataFrame:
                 if valor is not None:
                     linhas.append({"métrica": nome, "conjunto": conjunto, "modelo": modelo, "valor": float(valor)})
     return pd.DataFrame(linhas, columns=["métrica", "conjunto", "modelo", "valor"])
+
+
+MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
+               "novembro", "dezembro"]
+CONFIDENCE_TEXT = {"alta": "Alta", "media": "Média", "baixa": "Baixa"}
+
+
+def month_label(mes: str) -> str:
+    """'2026-07' -> 'Julho de 2026'."""
+    ano, numero = mes.split("-")
+    return f"{MONTH_NAMES[int(numero) - 1].capitalize()} de {ano}"
+
+
+def projection_frame(payload: dict) -> pd.DataFrame:
+    """Itens de /projecao/2026 em DataFrame: bairro, mes, casos, classe (texto), p25, p75, confianca."""
+    colunas = ["bairro", "mes", "casos", "classe", "p25", "p75", "confianca"]
+    itens = payload.get("items", [])
+    if not itens:
+        return pd.DataFrame(columns=colunas)
+    df = pd.DataFrame(itens)
+    return pd.DataFrame({
+        "bairro": df["bairro"], "mes": df["mes"], "casos": df["casos_esperados"].astype(float),
+        "classe": df["classe_risco"].map(lambda c: CLASSES[int(c)]), "p25": df["p25"].astype(float),
+        "p75": df["p75"].astype(float), "confianca": df["confianca"]})
+
+
+def projection_months(frame: pd.DataFrame) -> list[str]:
+    return sorted(frame["mes"].unique())
+
+
+def peak_month(payload: dict) -> str | None:
+    """Mês de maior projeção na curva da cidade."""
+    curva = payload.get("curva_cidade") or []
+    return max(curva, key=lambda c: c["casos_esperados"])["mes"] if curva else None
+
+
+def projection_ranking(frame: pd.DataFrame, mes: str, top: int = 10) -> pd.DataFrame:
+    """Ranking de um mês por casos esperados (bairro, casos/mês, faixa p25 a p75, classe, confiança)."""
+    recorte = frame[frame["mes"] == mes].sort_values(["casos", "bairro"], ascending=[False, True]).head(top)
+    saida = pd.DataFrame({
+        "bairro": recorte["bairro"].to_numpy(), "casos esperados/mês": recorte["casos"].round(1).to_numpy(),
+        "p25 a p75 histórico": [f"{a:.1f} a {b:.1f}" for a, b in zip(recorte["p25"], recorte["p75"])],
+        "classe": recorte["classe"].map(CLASS_TEXT).to_numpy(),
+        "confiança": recorte["confianca"].map(CONFIDENCE_TEXT).to_numpy()})
+    return saida.reset_index(drop=True)
+
+
+def projection_curve(payload: dict) -> pd.DataFrame:
+    """Curva sazonal da cidade: mes (1 a 12), casos_esperados, p25, p75."""
+    df = pd.DataFrame(payload.get("curva_cidade", []))
+    if df.empty:
+        return pd.DataFrame(columns=["mes", "casos_esperados", "p25", "p75"])
+    df["mes"] = df["mes"].str[-2:].astype(int)
+    return df
+
+
+def projection_history(payload: dict) -> dict[str, list]:
+    return payload.get("historico_cidade", {})
+
+
+def _peak_text(m: dict) -> str:
+    if m.get("pico_acerto") == 1.0:
+        return "acertou"
+    return f"errou (real {m['pico_real']}, projetado {m['pico_previsto']})"
+
+
+def backtest_rows(backtest_b: dict) -> pd.DataFrame:
+    """Métricas do Backtest B: método escolhido ao lado do baseline 'mesmo mês do último ano'."""
+    def valor(m, chave, casas):
+        v = m.get(chave)
+        return "n/d" if v is None else f"{v:.{casas}f}"
+
+    linhas = [("F1-macro das classes mensais", "f1_macro", 3), ("Recall da classe alta", "recall_alto", 3),
+              ("Spearman do ranking de bairros (média dos meses)", "spearman_bairros", 3),
+              ("Erro médio absoluto (casos/mês por bairro)", "mae_casos_mes", 2)]
+    escolhido, base = backtest_b["escolhido"], backtest_b["baseline_mesmo_mes_ultimo_ano"]
+    tabela = [{"métrica": nome, "método escolhido": valor(escolhido, chave, casas),
+               "baseline (mesmo mês do último ano)": valor(base, chave, casas)} for nome, chave, casas in linhas]
+    tabela.append({"métrica": "Mês de pico da cidade", "método escolhido": _peak_text(escolhido),
+                   "baseline (mesmo mês do último ano)": _peak_text(base)})
+    return pd.DataFrame(tabela)

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from app import auth, data, ui
@@ -209,6 +210,99 @@ def tab_bairro(pred: dict) -> None:
                          hide_index=True, width="stretch")
 
 
+def projection_map(frame: pd.DataFrame, geojson: dict, vmax: float):
+    dados = frame.assign(casos_txt=frame["casos"].map(ui.fmt_num), classe_txt=frame["classe"].map(data.CLASS_TEXT),
+                         conf_txt=frame["confianca"].map(data.CONFIDENCE_TEXT))
+    figura = px.choropleth_map(
+        dados, geojson=geojson, locations="bairro", featureidkey="properties.bairro", color="casos",
+        color_continuous_scale=ui.RISK_SCALE, range_color=(0, vmax), custom_data=["classe_txt", "casos_txt", "conf_txt"],
+        map_style="carto-positron", center={"lat": -8.06, "lon": -34.93}, zoom=11.0, opacity=0.85, height=560)
+    figura.update_traces(
+        marker_line_width=0.6, marker_line_color="#ffffff",
+        hovertemplate="<b>%{location}</b><br>Classe projetada: %{customdata[0]}<br>Casos esperados/mês: %{customdata[1]}"
+                      "<br>Confiança: %{customdata[2]}<extra></extra>")
+    figura.update_layout(
+        dragmode="pan", margin={"l": 0, "r": 0, "t": 0, "b": 0}, paper_bgcolor="rgba(0,0,0,0)",
+        font={"family": ui.FONT_STACK, "size": 14, "color": ui.INK},
+        coloraxis_colorbar={"title": {"text": "Casos esperados<br>por mês", "side": "top"}, "thickness": 14, "len": 0.55,
+                            "x": 0.99, "xanchor": "right", "y": 0.5, "bgcolor": "rgba(255,255,255,0.85)"})
+    return figura
+
+
+def seasonal_curve_chart(payload: dict, mes_destaque: str):
+    curva = data.projection_curve(payload)
+    nomes = [data.MONTH_NAMES[m - 1][:3].capitalize() for m in curva["mes"]]
+    figura = go.Figure()
+    for ano, valores in data.projection_history(payload).items():
+        figura.add_scatter(x=nomes, y=valores, mode="lines", name=f"Real {ano}", line={"width": 1, "color": "#c9c3bb"},
+                           hovertemplate="%{y:.0f} casos/mês<extra>Real " + ano + "</extra>", showlegend=False)
+    figura.add_scatter(x=nomes, y=curva["p75"], mode="lines", line={"width": 0}, hoverinfo="skip", showlegend=False)
+    figura.add_scatter(x=nomes, y=curva["p25"], mode="lines", line={"width": 0}, fill="tonexty",
+                       fillcolor="rgba(214,98,31,0.18)", name="Faixa p25 a p75 dos anos reais",
+                       hovertemplate="p25 %{y:.0f}<extra></extra>")
+    figura.add_scatter(x=nomes, y=curva["casos_esperados"], mode="lines+markers", name="Projeção 2026",
+                       line={"width": 3, "color": "#c2410c"}, marker={"size": 8},
+                       hovertemplate="%{y:.0f} casos/mês esperados<extra>Projeção 2026</extra>")
+    numero = int(mes_destaque[-2:])
+    figura.add_scatter(x=[nomes[numero - 1]], y=[float(curva.loc[curva["mes"] == numero, "casos_esperados"].iloc[0])],
+                       mode="markers", name="Mês selecionado",
+                       marker={"size": 15, "color": "rgba(0,0,0,0)", "line": {"width": 3, "color": "#1f2937"}},
+                       hoverinfo="skip")
+    figura.update_yaxes(title="Casos por mês (soma dos 94 bairros)", rangemode="tozero")
+    return ui.style_figure(figura, height=380, titulo="Curva sazonal da cidade: projeção 2026 e anos reais (cinza)")
+
+
+def tab_projecao(frame: pd.DataFrame, payload: dict) -> None:
+    st.subheader("Projeção sazonal de 2026 por bairro")
+    aviso = payload.get("aviso", "Projeção sazonal baseada no histórico; não há dados reais de 2026 para verificação.")
+    st.warning(f"**{aviso}** Isto é uma projeção do padrão sazonal do histórico, não uma previsão: não captura "
+               "surtos, não usa clima futuro e não é número exato de casos. É diferente da previsão semanal das outras "
+               "abas. Não é monitoramento em tempo real nem diagnóstico.", icon="⚠️")
+    if frame.empty:
+        st.info("Sem projeção disponível. Gere-a com `python -m src.projecao`.")
+        return
+    meses = data.projection_months(frame)
+    padrao = data.peak_month(payload) or meses[0]
+    escolhido = st.selectbox("Mês projetado", meses, index=meses.index(padrao), format_func=data.month_label,
+                             key="proj_mes")
+    do_mes = frame[frame["mes"] == escolhido]
+    limiares = payload["limiares_casos_mes"]
+    ui.render(ui.kpi_grid([
+        ui.kpi_card("Mês", data.month_label(escolhido), "projeção sazonal", texto=True),
+        ui.kpi_card("Casos esperados na cidade", ui.fmt_num(float(do_mes["casos"].sum()), 0),
+                    "soma dos bairros, padrão sazonal"),
+        ui.kpi_card("Bairros em classe alta", str(int((do_mes["classe"] == "alto").sum())),
+                    f"acima de {limiares[1]:.1f} casos/mês")]))
+    geojson = data.load_geojson()
+    vmax = float(frame["casos"].quantile(0.98)) or 1.0
+    mapa, topo = st.columns([3, 2], gap="medium")
+    with mapa:
+        with st.container(border=True, key="card_proj_mapa"):
+            if data.map_ready(geojson, do_mes.rename(columns={"casos": "indice"})):
+                show_map(projection_map(do_mes, geojson, vmax))
+            else:
+                st.warning("Mapa indisponível; mostrando os 20 maiores bairros do mês.")
+                st.dataframe(data.projection_ranking(frame, escolhido, 20), hide_index=True, width="stretch")
+    with topo:
+        with st.container(border=True, key="card_proj_ranking"):
+            ui.render(ui.card_title("Ranking do mês", "casos esperados por mês, faixa histórica e confiança"))
+            st.dataframe(data.projection_ranking(frame, escolhido, 10), hide_index=True, width="stretch")
+            st.caption("Confiança = quanto a classe projetada se repete nos anos do histórico (não é intervalo de "
+                       "confiança estatístico).")
+    with st.container(border=True, key="card_proj_curva"):
+        show_chart(seasonal_curve_chart(payload, escolhido))
+        st.caption("Linha grossa: projeção de 2026. Linhas cinza: cada ano real. Faixa: percentis 25 a 75 dos anos "
+                   "reais no mesmo mês. Anos epidêmicos (2015-16, 2024) mudam muito a magnitude.")
+    b = payload["backtest_b"]
+    with st.container(border=True, key="card_proj_backtest"):
+        ui.render(ui.card_title("Quanto confiar? Backtest B",
+                                f"treino até {b['treino_ate']}, comparado com o real de {b['projeta']} (meses completos)"))
+        st.dataframe(data.backtest_rows(b), hide_index=True, width="stretch")
+        st.caption(f"Método escolhido: **{payload['metodo']}** (escolhido por um backtest anterior, treino até 2023 e "
+                   f"projeção de 2024; o Backtest B foi calculado uma vez, sem influenciar a escolha). {b['nota']} "
+                   "Métricas de classes mensais, diferentes das do modelo semanal.")
+
+
 def sensor_chart(recorte: pd.DataFrame, coluna: str, titulo: str, barras: bool = False):
     construir = px.bar if barras else px.line
     figura = construir(recorte, x="semana", y=coluna, color="bairro", color_discrete_sequence=ui.SERIES_COLORS,
@@ -332,7 +426,12 @@ def main() -> None:
         st.warning(aviso)
     if pred and not frame.empty:
         ui.render(ui.summary_cards(frame, *semanas))
-    abas = st.tabs(["Mapa de risco", "Ranking", "Bairro", "Sensor", "Modelo"])
+    try:
+        projecao = get("/projecao/2026")
+        frame_proj = data.projection_frame(projecao)
+    except ApiError as erro:
+        projecao, frame_proj = {"items": [], "aviso": erro.detail}, data.projection_frame({})
+    abas = st.tabs(["Mapa de risco", "Ranking", "Bairro", "Projeção 2026", "Sensor", "Modelo"])
     try:
         with abas[0]:
             tab_map(frame, pred or {})
@@ -341,8 +440,10 @@ def main() -> None:
         with abas[2]:
             tab_bairro(pred or {})
         with abas[3]:
-            tab_sensor()
+            tab_projecao(frame_proj, projecao)
         with abas[4]:
+            tab_sensor()
+        with abas[5]:
             tab_modelo(info)
     except ApiUnavailable as erro:
         show_api_down(erro, com_cabecalho=False)

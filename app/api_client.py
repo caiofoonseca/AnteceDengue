@@ -67,3 +67,7 @@ class ApiClient:
     def sensor_weekly(self, bairro: str | None = None, desde: str | None = None) -> dict:
         params = {k: v for k, v in (("bairro", bairro), ("desde", desde)) if v is not None}
         return self.get("/sensor/weekly", params)
+
+    def projecao(self, bairro: str | None = None, mes: str | None = None) -> dict:
+        params = {k: v for k, v in (("bairro", bairro), ("mes", mes)) if v is not None}
+        return self.get("/projecao/2026", params)
