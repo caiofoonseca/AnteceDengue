@@ -43,7 +43,7 @@ def check_env(valores: dict[str, str]) -> list[tuple[str, str]]:
     if valores.get("DASHBOARD_AUTH", "on").lower() in ("off", "0", "false", "no"):
         achados.append(("AVISO", "DASHBOARD_AUTH=off: o dashboard abre sem login (só para demonstração)"))
     porta_mqtt = valores.get("MQTT_HOST_PORT", PORTAS["MQTT_HOST_PORT"])
-    achados.append(("AVISO", f"Mosquitto anônimo em 0.0.0.0:{porta_mqtt} (a ESP32 precisa); use só em rede de "
+    achados.append(("AVISO", f"Mosquitto anônimo em 0.0.0.0:{porta_mqtt} (sem autenticação); use só em rede de "
                              "desenvolvimento ou demonstração"))
     return achados
 

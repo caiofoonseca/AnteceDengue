@@ -55,17 +55,18 @@ else
   "${COMPOSE[@]}" restart api
 fi
 
-echo "== 4/5 Subindo o simulador de sensor (SENSOR_FONTE=simulado) =="
-SENSOR_FONTE=simulado "${COMPOSE[@]}" --profile demo up -d
-for _ in $(seq 1 20); do
+echo "== 4/5 Subindo a estação simulada (dados da API Open-Meteo via MQTT) =="
+SENSOR_FONTE=open-meteo "${COMPOSE[@]}" --profile demo up -d
+for _ in $(seq 1 30); do
   n=$("${COMPOSE[@]}" exec -T postgres psql -U "${POSTGRES_USER:-antecedengue}" -tAc "select count(*) from sensor_readings where is_valid" 2>/dev/null || echo 0)
   [ "${n:-0}" -gt 0 ] && break
   sleep 3
 done
 "${COMPOSE[@]}" exec -T api python -m src.sensor_agg >/dev/null
+"${COMPOSE[@]}" --profile export run --rm export-sensor >/dev/null || echo "Aviso: não consegui gerar data/processed/sensor_semanal.csv"
 
 echo "== 5/5 Pronto =="
-echo "Dashboard : http://localhost:${porta_dash}   (sensor SIMULADO)"
+echo "Dashboard : http://localhost:${porta_dash}   (estação simulada: dados Open-Meteo via MQTT)"
 if [ "$auth_dash" = "off" ]; then
   echo "Login     : desligado (DASHBOARD_AUTH=off)"
 else

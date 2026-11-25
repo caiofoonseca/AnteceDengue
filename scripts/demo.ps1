@@ -62,22 +62,23 @@ if ($existe) {
     Invoke-Compose @base restart api
 }
 
-Write-Host "== 4/5 Subindo o simulador de sensor (SENSOR_FONTE=simulado) =="
-$env:SENSOR_FONTE = "simulado"
+Write-Host "== 4/5 Subindo a estação simulada (dados da API Open-Meteo via MQTT) =="
+$env:SENSOR_FONTE = "open-meteo"
 try {
     Invoke-Compose @base --profile demo up -d
 } finally {
     Remove-Item Env:SENSOR_FONTE -ErrorAction SilentlyContinue
 }
-for ($i = 0; $i -lt 20; $i++) {
+for ($i = 0; $i -lt 30; $i++) {
     $n = (& docker compose @base exec -T postgres psql -U $usuarioPg -tAc "select count(*) from sensor_readings where is_valid" 2>$null)
     if ($n -and [int]$n -gt 0) { break }
     Start-Sleep -Seconds 3
 }
 Invoke-Compose @base exec -T api python -m src.sensor_agg | Out-Null
+try { Invoke-Compose @base --profile export run --rm export-sensor | Out-Null } catch { Write-Host "Aviso: não consegui gerar data/processed/sensor_semanal.csv" }
 
 Write-Host "== 5/5 Pronto =="
-Write-Host "Dashboard : http://localhost:$portaDash   (sensor SIMULADO)"
+Write-Host "Dashboard : http://localhost:$portaDash   (estação simulada: dados Open-Meteo via MQTT)"
 if ($authDash -eq "off") {
     Write-Host "Login     : desligado (DASHBOARD_AUTH=off)"
 } else {
