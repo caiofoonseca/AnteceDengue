@@ -61,6 +61,7 @@ Brutos ficam em `data/raw/clima/` (fora do git). Para refazer a validação com 
 - Coordenadas das estações em `config/stations_bairros.json`. O contrato do payload MQTT não mudou; `battery_voltage` é só um campo fixo do contrato, sem sentido físico.
 - O MQTT e o `sensor_semanal.csv` NÃO alimentam o treino do modelo (o histórico é de poucas semanas e a chuva de treino é a reanálise ERA5). Servem ao dashboard e à demonstração da infraestrutura.
 - A precipitação da Open-Meteo vem de modelo/reanálise, não é observação. A API gratuita é só para uso não comercial. Crédito: **Weather data by [Open-Meteo.com](https://open-meteo.com)** (CC BY 4.0).
+- São 8 estações simuladas (`recife-001` a `recife-008`: BOA VIAGEM, VARZEA, BOA VISTA, CASA FORTE, IPUTINGA, PINA, AFOGADOS, IBURA), coordenadas = centroide do bairro em `app/assets/bairros.geojson`; no máximo 1 consulta por estação por minuto.
 - Sensores reais: trabalho futuro.
 
 ## Limites dos bairros (mapa do dashboard)

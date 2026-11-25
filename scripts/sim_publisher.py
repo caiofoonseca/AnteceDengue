@@ -28,7 +28,7 @@ from src import api_publisher, config
 
 log = logging.getLogger("sim_publisher")
 
-STATIONS = {"recife-001": (-8.1190, -34.9000), "recife-002": (-8.0460, -34.9340)}
+STATIONS = api_publisher.stations_config()
 TOPIC = "antecedengue/estacoes/{}/leituras"
 INVALID_EVERY = 15
 

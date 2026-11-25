@@ -68,7 +68,7 @@ Grava `data/processed/predictions_latest.csv` (um bairro por linha, ordenado por
 
 ## Estação simulada: Open-Meteo, MQTT e agregação semanal
 
-Não há sensor físico nem ESP32 (decisão do professor orientador, 25/11/2026): a aquisição é uma **estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT**. Fluxo: API Open-Meteo -> publicador (`scripts/sim_publisher.py`, `--source api`, padrão) -> MQTT/Mosquitto -> ingestor -> Postgres -> `sensor_weekly` -> `data/processed/sensor_semanal.csv`. Sensores reais ficam como trabalho futuro.
+Não há sensor físico nem ESP32 (decisão do professor orientador, 25/11/2026): a aquisição é uma **estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT**. Fluxo: API Open-Meteo -> publicador (`scripts/sim_publisher.py`, `--source api`, padrão) -> MQTT/Mosquitto -> ingestor -> Postgres -> `sensor_weekly` -> `data/processed/sensor_semanal.csv`. Sensores reais ficam como trabalho futuro. São 8 estações simuladas (`recife-001` a `recife-008`: BOA VIAGEM, VARZEA, BOA VISTA, CASA FORTE, IPUTINGA, PINA, AFOGADOS e IBURA), com coordenadas do centroide de cada bairro calculado a partir de `app/assets/bairros.geojson`; cada estação faz no máximo 1 consulta por minuto à Open-Meteo.
 
 As leituras NÃO alimentam o modelo (nem o `sensor_semanal.csv`); servem ao dashboard e à demonstração da infraestrutura. A precipitação da Open-Meteo vem de modelo/reanálise, não é observação, e a API gratuita é só para uso não comercial. **Weather data by [Open-Meteo.com](https://open-meteo.com)** (CC BY 4.0).
 

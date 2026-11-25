@@ -1,5 +1,17 @@
 bairro,semana_inicio,temp_media,umid_media,chuva_mm_soma,n_leituras,fonte
+AFOGADOS,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
+AFOGADOS,2026-11-22,28.62,69.21,2.7,95,api_open_meteo_via_mqtt
 BOA VIAGEM,2026-11-15,28.61,64.51,1.4,96,api_open_meteo_via_mqtt
-BOA VIAGEM,2026-11-22,28.8,68.44,1.9,95,api_open_meteo_via_mqtt
+BOA VIAGEM,2026-11-22,29.02,67.48,1.9,122,api_open_meteo_via_mqtt
+BOA VISTA,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
+BOA VISTA,2026-11-22,28.62,69.21,2.7,95,api_open_meteo_via_mqtt
+CASA FORTE,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
+CASA FORTE,2026-11-22,28.62,69.21,2.7,95,api_open_meteo_via_mqtt
+IBURA,2026-11-15,28.51,64.5,1.4,96,api_open_meteo_via_mqtt
+IBURA,2026-11-22,28.65,68.95,1.9,95,api_open_meteo_via_mqtt
+IPUTINGA,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
+IPUTINGA,2026-11-22,28.62,69.21,2.7,95,api_open_meteo_via_mqtt
+PINA,2026-11-15,28.72,63.99,1.1,96,api_open_meteo_via_mqtt
+PINA,2026-11-22,28.76,69.26,2.7,95,api_open_meteo_via_mqtt
 VARZEA,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
-VARZEA,2026-11-22,28.68,68.79,2.7,95,api_open_meteo_via_mqtt
+VARZEA,2026-11-22,28.93,67.66,2.7,122,api_open_meteo_via_mqtt

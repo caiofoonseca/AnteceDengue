@@ -197,7 +197,7 @@ def test_backfill_com_api_fora_do_ar_nao_levanta(monkeypatch):
 
 def test_estacoes_do_config_tem_coordenadas():
     estacoes = ap.stations_config()
-    assert set(estacoes) == {"recife-001", "recife-002"}
+    assert set(estacoes) == {f"recife-{i:03d}" for i in range(1, 9)}
     assert all(-9 < lat < -7 and -36 < lon < -34 for lat, lon in estacoes.values())
 
 
@@ -237,3 +237,15 @@ def test_relogio_com_fuso_funciona_no_backfill_e_no_poll(monkeypatch):
     cache = ap.CurrentCache(lambda lat, lon: ap.parse_current(RESPOSTA_ATUAL), relogio=lambda: 0.0)
     assert ap.poll_once(publicados.append, {"a": (1.0, 1.0)}, cache, ap.RainTracker(), agora) == 1
     assert publicados[-1]["timestamp"] == "2026-11-25T13:40:00Z"
+
+
+def test_estacoes_apontam_para_bairros_do_painel_com_coordenadas_dentro_do_recife():
+    import pandas as pd
+
+    from src import config
+    from src.stations import load_station_map
+
+    painel = set(pd.read_csv(config.PANEL_PATH)["bairro"])
+    mapa = load_station_map()
+    assert len(mapa) == 8 and set(mapa.values()) <= painel and len(set(mapa.values())) == 8
+    assert {"BOA VISTA", "CASA FORTE", "IPUTINGA", "PINA", "AFOGADOS", "IBURA"} <= set(mapa.values())
