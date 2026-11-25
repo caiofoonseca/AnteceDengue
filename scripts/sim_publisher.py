@@ -1,21 +1,30 @@
-"""FERRAMENTA DE DESENVOLVIMENTO: publica leituras SIMULADAS de sensor no Mosquitto.
+"""Publicador da estação simulada do AnteceDengue (não existe sensor físico).
 
-Os valores são sorteados (SEED 42), não vêm de estação nenhuma. Serve só para demonstrar a infraestrutura
-(MQTT, ingestor, banco, API e dashboard). Nunca usar estas leituras em resultado ou relatório.
+--source api (padrão): publica no Mosquitto leituras da API pública Open-Meteo (temperatura, umidade e precipitação
+atuais de cada estação de config/stations_bairros.json), no contrato de payload do projeto. Implementação em
+src/api_publisher.py. Weather data by Open-Meteo.com (https://open-meteo.com); a precipitação é modelada, não medida.
 
-Uso: python scripts/sim_publisher.py --host mosquitto --backfill-dias 21 --intervalo 5
-Publica primeiro um histórico recente (uma leitura a cada 6 h por estação) e depois leituras ao vivo.
-Uma leitura em cada 15 sai fora da faixa de propósito, para exercitar a validação do ingestor.
+--source synthetic: fallback OFFLINE com valores sorteados (SEED 42), só para demonstrar a infraestrutura sem
+internet. Uma leitura em cada 15 sai fora da faixa de propósito, para exercitar a validação do ingestor.
+Nunca usar leituras sintéticas em resultado ou relatório.
+
+Uso: python scripts/sim_publisher.py --host mosquitto --source api --backfill-dias 7 --interval 60
 """
 import argparse
 import datetime as dt
 import json
 import logging
 import random
+import sys
 import time
+from pathlib import Path
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src import api_publisher, config
 
 log = logging.getLogger("sim_publisher")
 
@@ -50,7 +59,7 @@ def run(host: str, port: int, backfill_days: int, interval: float, max_live: int
     time.sleep(2)
     now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
     sent = 0
-    log.warning("DADOS SIMULADOS: estas leituras não vêm de estações reais")
+    log.warning("DADOS SINTÉTICOS (fallback offline): valores sorteados, sem relação com o tempo real")
     for hours in range(backfill_days * 24, 0, -6):
         for station in STATIONS:
             sent += 1
@@ -70,16 +79,25 @@ def run(host: str, port: int, backfill_days: int, interval: float, max_live: int
 
 
 def main(argv=None) -> None:
-    parser = argparse.ArgumentParser(description="Publicador de leituras SIMULADAS do AnteceDengue")
-    parser.add_argument("--host", default="localhost")
-    parser.add_argument("--port", type=int, default=1883)
-    parser.add_argument("--backfill-dias", type=int, default=21)
-    parser.add_argument("--intervalo", type=float, default=5.0)
+    parser = argparse.ArgumentParser(description="Publicador da estação simulada do AnteceDengue")
+    parser.add_argument("--source", choices=("api", "synthetic"), default="api",
+                        help="api: leituras da Open-Meteo (padrão); synthetic: valores sorteados, offline")
+    parser.add_argument("--host", default=config.MQTT_HOST)
+    parser.add_argument("--port", type=int, default=config.MQTT_PORT)
+    parser.add_argument("--backfill-dias", type=int, default=None,
+                        help="histórico recente a publicar (padrão: 7 na api, 21 no synthetic)")
+    parser.add_argument("--interval", "--intervalo", dest="interval", type=float, default=None,
+                        help="segundos entre ciclos (padrão: 60 na api, 5 no synthetic; mínimo 60 na api)")
     parser.add_argument("--max-ao-vivo", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args(argv)
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    run(args.host, args.port, args.backfill_dias, args.intervalo, args.max_ao_vivo, args.seed)
+    if args.source == "api":
+        api_publisher.run(args.host, args.port, 60.0 if args.interval is None else args.interval,
+                          7 if args.backfill_dias is None else args.backfill_dias, args.max_ao_vivo)
+    else:
+        run(args.host, args.port, 21 if args.backfill_dias is None else args.backfill_dias,
+            5.0 if args.interval is None else args.interval, args.max_ao_vivo, args.seed)
 
 
 if __name__ == "__main__":

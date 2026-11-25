@@ -2,5 +2,9 @@
   "stations": {
     "recife-001": "BOA VIAGEM",
     "recife-002": "VARZEA"
+  },
+  "coordinates": {
+    "recife-001": [-8.1190, -34.9000],
+    "recife-002": [-8.0460, -34.9340]
   }
 }
