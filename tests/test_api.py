@@ -253,7 +253,7 @@ def test_aviso_de_versao_diferente_do_sklearn(ambiente, tmp_path, caplog):
 def test_openapi_lista_endpoints_e_descreve_risk_score(client):
     esquema = client.get("/openapi.json").json()
     assert set(esquema["paths"]) == {"/health", "/model", "/predictions/latest", "/bairros", "/bairros/{bairro}",
-                                     "/predict", "/sensor/weekly"}
+                                     "/predict", "/sensor/weekly", "/projecao/2026"}
     campos = esquema["components"]["schemas"]["PredictionItem"]["properties"]
     assert "NÃO é uma probabilidade" in campos["risk_score"]["description"]
     assert "calibrado" in campos["risk_score"]["description"]

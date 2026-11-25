@@ -124,3 +124,28 @@ class PredictRow(BaseModel):
 class PredictResponse(BaseModel):
     model: str
     predictions: list[PredictRow]
+
+
+class ProjecaoItem(BaseModel):
+    bairro: str
+    mes: str = Field(description="Mês projetado, aaaa-mm.")
+    casos_esperados: float = Field(description="Casos/mês esperados pelo padrão sazonal (padronizados para 52/12 semanas).")
+    classe_risco: int = Field(description="0 = baixo, 1 = médio, 2 = alto (limiares mensais q0.60 e q0.85 do histórico).")
+    p25: float = Field(description="Percentil 25 do histórico daquele bairro e mês.")
+    p75: float = Field(description="Percentil 75 do histórico daquele bairro e mês.")
+    confianca: str = Field(description="alta, media ou baixa: consistência da classe entre os anos do histórico.")
+    metodo: str
+    ultima_data_real_usada: str
+
+
+class ProjecaoResponse(BaseModel):
+    aviso: str = Field(description="Aviso fixo: é projeção sazonal, não previsão verificável.")
+    metodo: str
+    ultima_data_real_usada: str
+    ultimo_mes_completo: str
+    limiares_casos_mes: list[float] = Field(description="Limiares (q0.60, q0.85) em casos/mês, ajustados só no histórico.")
+    total: int
+    items: list[ProjecaoItem]
+    curva_cidade: list[dict] = Field(description="Soma dos bairros por mês projetado, com p25-p75 dos totais históricos.")
+    historico_cidade: dict = Field(description="Casos/mês da cidade por ano real (12 valores; null = mês não completo).")
+    backtest_b: dict = Field(description="Métricas do Backtest B (treino até 2024, 2025 real) do método escolhido e do baseline.")

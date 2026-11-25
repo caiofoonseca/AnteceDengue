@@ -4,6 +4,7 @@ Os endpoints só falam com a classe Repository. Para trocar o CSV por uma tabela
 reescrever os métodos daqui, sem mexer nos endpoints.
 """
 import difflib
+import json
 import logging
 from pathlib import Path
 
@@ -30,6 +31,10 @@ class SensorDbUnavailable(RuntimeError):
     pass
 
 
+class ProjectionUnavailable(RuntimeError):
+    pass
+
+
 def make_engine(url: str) -> Engine:
     url = normalize_database_url(url)
     argumentos = {"connect_args": {"connect_timeout": 2}} if url.startswith("postgresql") else {}
@@ -38,7 +43,10 @@ def make_engine(url: str) -> Engine:
 
 class Repository:
     def __init__(self, panel_path: Path = config.PANEL_PATH, predictions_path: Path = config.PREDICTIONS_PATH,
-                 database_url: str | None = None, engine: Engine | None = None):
+                 database_url: str | None = None, engine: Engine | None = None,
+                 projection_path: Path = config.PROJECTION_PATH, projection_meta_path: Path = config.PROJECTION_META_PATH):
+        self.projection_path = Path(projection_path)
+        self.projection_meta_path = Path(projection_meta_path)
         self.panel_path = Path(panel_path)
         self.predictions_path = Path(predictions_path)
         self.engine = engine if engine is not None else make_engine(database_url or config.DATABASE_URL)
@@ -104,6 +112,15 @@ class Repository:
         chave = normalize_name(nome) or ""
         mapa = {normalize_name(b): b for b in self.bairros()}
         return [mapa[k] for k in difflib.get_close_matches(chave, list(mapa), n=3, cutoff=0.6)]
+
+    def projection(self) -> pd.DataFrame:
+        return self._read_csv(self.projection_path, "projection", ProjectionUnavailable,
+                              f"Projeção não encontrada em {self.projection_path.name}. Rode python -m src.projecao.")
+
+    def projection_meta(self) -> dict:
+        if not self.projection_meta_path.exists():
+            raise ProjectionUnavailable(f"Metadados da projeção não encontrados em {self.projection_meta_path.name}.")
+        return json.loads(self.projection_meta_path.read_text(encoding="utf-8"))
 
     def latest_prediction(self, bairro: str) -> dict | None:
         try:
