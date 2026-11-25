@@ -61,7 +61,6 @@ html { font-size: 17px; }
 .login-brand .logo-mark { margin-bottom: 0.5rem; }
 .login-title { font-size: 2.2rem; line-height: 1.1; }
 .login-tagline { margin: 0.5rem auto 0 auto; max-width: 28rem; color: var(--muted); font-size: 1rem; }
-.login-note { margin: 1.2rem auto 0 auto; max-width: 30rem; text-align: center; color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
 .st-key-card_login { padding: 0.9rem 1.1rem 0.6rem 1.1rem; }
 .footer-brand { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem; font-size: 1rem; }
 .footer-brand span:last-child { color: var(--muted); font-size: 0.8rem; margin-left: 0.4rem; }

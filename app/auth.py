@@ -89,8 +89,6 @@ def login_page(esperado: tuple[str, str] | None) -> None:
                         st.rerun()
                     register_failure()
                     st.error("Usuário ou senha incorretos.")
-        ui.render('<div class="login-note">O índice de risco é um índice de ordenação de 0 a 100, não calibrado e '
-                  'não é probabilidade de surto. Projeto G15 · CESAR School.</div>')
     st.stop()
 
 
