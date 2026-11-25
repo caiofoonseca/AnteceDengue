@@ -253,3 +253,5 @@ secrets.h
 !data/processed/clima_semanal.csv
 !data/processed/predictions_latest.csv
 !data/processed/sensor_semanal.csv
+!data/processed/projecao_2026_mensal.csv
+!data/processed/projecao_2026_meta.json

@@ -1,0 +1,505 @@
+{
+  "curva_cidade": [
+    {
+      "mes": "2026-01",
+      "casos_esperados": 131.27,
+      "p25": 54.71,
+      "p75": 157.3
+    },
+    {
+      "mes": "2026-02",
+      "casos_esperados": 220.47,
+      "p25": 92.08,
+      "p75": 283.29
+    },
+    {
+      "mes": "2026-03",
+      "casos_esperados": 345.29,
+      "p25": 113.21,
+      "p75": 428.57
+    },
+    {
+      "mes": "2026-04",
+      "casos_esperados": 313.85,
+      "p25": 117.22,
+      "p75": 457.71
+    },
+    {
+      "mes": "2026-05",
+      "casos_esperados": 318.34,
+      "p25": 131.41,
+      "p75": 502.34
+    },
+    {
+      "mes": "2026-06",
+      "casos_esperados": 383.87,
+      "p25": 172.25,
+      "p75": 421.74
+    },
+    {
+      "mes": "2026-07",
+      "casos_esperados": 501.54,
+      "p25": 157.73,
+      "p75": 421.96
+    },
+    {
+      "mes": "2026-08",
+      "casos_esperados": 177.17,
+      "p25": 134.33,
+      "p75": 372.56
+    },
+    {
+      "mes": "2026-09",
+      "casos_esperados": 148.42,
+      "p25": 117.22,
+      "p75": 286.54
+    },
+    {
+      "mes": "2026-10",
+      "casos_esperados": 119.02,
+      "p25": 109.42,
+      "p75": 151.02
+    },
+    {
+      "mes": "2026-11",
+      "casos_esperados": 107.28,
+      "p25": 66.62,
+      "p75": 121.6
+    },
+    {
+      "mes": "2026-12",
+      "casos_esperados": 84.45,
+      "p25": 64.19,
+      "p75": 100.97
+    }
+  ],
+  "historico_cidade": {
+    "2015": [
+      1268.58,
+      1905.58,
+      5060.47,
+      4933.5,
+      1666.6,
+      425.75,
+      224.25,
+      419.47,
+      736.67,
+      1565.42,
+      2782.0,
+      1847.08
+    ],
+    "2016": [
+      3316.73,
+      4104.75,
+      1779.92,
+      946.83,
+      431.6,
+      351.0,
+      290.33,
+      231.83,
+      131.08,
+      117.0,
+      115.92,
+      105.08
+    ],
+    "2017": [
+      123.93,
+      107.25,
+      135.42,
+      92.73,
+      109.42,
+      108.33,
+      71.07,
+      57.42,
+      55.25,
+      39.0,
+      24.92,
+      36.4
+    ],
+    "2018": [
+      35.75,
+      65.0,
+      91.0,
+      195.87,
+      173.33,
+      147.33,
+      113.53,
+      105.08,
+      90.13,
+      68.25,
+      65.0,
+      41.6
+    ],
+    "2019": [
+      52.0,
+      124.58,
+      160.33,
+      327.17,
+      573.08,
+      516.53,
+      549.25,
+      618.58,
+      509.6,
+      351.0,
+      192.83,
+      102.27
+    ],
+    "2020": [
+      102.92,
+      92.08,
+      67.6,
+      21.67,
+      71.07,
+      257.83,
+      294.67,
+      195.87,
+      187.42,
+      112.67,
+      65.0,
+      74.75
+    ],
+    "2021": [
+      104.0,
+      124.58,
+      205.83,
+      546.0,
+      1957.8,
+      1978.17,
+      1193.83,
+      601.47,
+      319.58,
+      161.2,
+      95.33,
+      63.92
+    ],
+    "2022": [
+      22.53,
+      30.33,
+      49.83,
+      114.83,
+      153.4,
+      197.17,
+      172.47,
+      161.42,
+      112.67,
+      120.47,
+      71.5,
+      73.67
+    ],
+    "2023": [
+      84.93,
+      92.08,
+      219.92,
+      119.6,
+      101.83,
+      100.75,
+      143.0,
+      144.08,
+      132.17,
+      112.67,
+      87.75,
+      65.0
+    ],
+    "2024": [
+      57.42,
+      352.08,
+      510.47,
+      330.42,
+      255.67,
+      314.6,
+      204.75,
+      131.08,
+      130.87,
+      108.33,
+      123.5,
+      97.07
+    ],
+    "2025": [
+      190.67,
+      214.5,
+      346.67,
+      369.42,
+      326.08,
+      417.73,
+      748.58,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "aviso": "Projeção sazonal baseada no histórico até 17/08/2025; não há dados reais de 2026 para verificação.",
+  "metodo": "recencia_h1",
+  "ultima_data_real_usada": "2025-08-17",
+  "ultimo_mes_completo": "2025-07",
+  "limiares_casos_mes": [
+    1.0833333333333333,
+    6.5
+  ],
+  "backtest_a": {
+    "treino_ate": 2023,
+    "projeta": 2024,
+    "metodos": {
+      "climatologia": {
+        "f1_macro": 0.42205087342933334,
+        "recall_alto": 0.8053097345132744,
+        "spearman_bairros": 0.3874375094949733,
+        "mae_casos_mes": 4.198450223272918,
+        "mae_cidade_casos_mes": 268.7108024691358,
+        "pico_real": 3,
+        "pico_previsto": 3,
+        "pico_acerto": 1.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      },
+      "ultimo_ano": {
+        "f1_macro": 0.48559350985272537,
+        "recall_alto": 0.25663716814159293,
+        "spearman_bairros": 0.3929785133181767,
+        "mae_casos_mes": 2.2638593380614656,
+        "mae_cidade_casos_mes": 108.73055555555554,
+        "pico_real": 3,
+        "pico_previsto": 3,
+        "pico_acerto": 1.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      },
+      "recencia_h1": {
+        "f1_macro": 0.5177435480179094,
+        "recall_alto": 0.40707964601769914,
+        "spearman_bairros": 0.42922934277780783,
+        "mae_casos_mes": 2.4055676708165046,
+        "mae_cidade_casos_mes": 103.71460915416397,
+        "pico_real": 3,
+        "pico_previsto": 6,
+        "pico_acerto": 0.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      },
+      "recencia_h2": {
+        "f1_macro": 0.4953690693956994,
+        "recall_alto": 0.5309734513274337,
+        "spearman_bairros": 0.4213926933291115,
+        "mae_casos_mes": 2.7426270590072828,
+        "mae_cidade_casos_mes": 108.71277355987327,
+        "pico_real": 3,
+        "pico_previsto": 6,
+        "pico_acerto": 0.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      },
+      "recencia_h3": {
+        "f1_macro": 0.4657815237283334,
+        "recall_alto": 0.6106194690265486,
+        "spearman_bairros": 0.4121289403732073,
+        "mae_casos_mes": 3.0112844971153625,
+        "mae_cidade_casos_mes": 116.63835920775635,
+        "pico_real": 3,
+        "pico_previsto": 5,
+        "pico_acerto": 0.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      },
+      "random_forest": {
+        "f1_macro": 0.3608786275452942,
+        "recall_alto": 0.0,
+        "spearman_bairros": 0.41094913382599857,
+        "mae_casos_mes": 2.298113338610743,
+        "mae_cidade_casos_mes": 152.37520835493845,
+        "pico_real": 3,
+        "pico_previsto": 9,
+        "pico_acerto": 0.0,
+        "n_linhas": 1128,
+        "n_meses": 12,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 847,
+          "1": 168,
+          "2": 113
+        }
+      }
+    }
+  },
+  "backtest_b": {
+    "treino_ate": 2024,
+    "projeta": 2025,
+    "metodos": {
+      "climatologia": {
+        "f1_macro": 0.45103602156107786,
+        "recall_alto": 0.75,
+        "spearman_bairros": 0.6006345816273582,
+        "mae_casos_mes": 4.6486854103343465,
+        "mae_cidade_casos_mes": 336.3688095238095,
+        "pico_real": 7,
+        "pico_previsto": 3,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      },
+      "ultimo_ano": {
+        "f1_macro": 0.5183150183150184,
+        "recall_alto": 0.43103448275862066,
+        "spearman_bairros": 0.4183674364794013,
+        "mae_casos_mes": 3.9115248226950348,
+        "mae_cidade_casos_mes": 170.14523809523808,
+        "pico_real": 7,
+        "pico_previsto": 3,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      },
+      "recencia_h1": {
+        "f1_macro": 0.5953328544061303,
+        "recall_alto": 0.5,
+        "spearman_bairros": 0.5859819213406708,
+        "mae_casos_mes": 3.079919624720586,
+        "mae_cidade_casos_mes": 117.49085090536703,
+        "pico_real": 7,
+        "pico_previsto": 6,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      },
+      "recencia_h2": {
+        "f1_macro": 0.5780291269313226,
+        "recall_alto": 0.5517241379310345,
+        "spearman_bairros": 0.6177101478160719,
+        "mae_casos_mes": 2.9526136271610675,
+        "mae_cidade_casos_mes": 97.77701256074364,
+        "pico_real": 7,
+        "pico_previsto": 6,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      },
+      "recencia_h3": {
+        "f1_macro": 0.5599823289102599,
+        "recall_alto": 0.6637931034482759,
+        "spearman_bairros": 0.6164068154748655,
+        "mae_casos_mes": 3.0406862872709097,
+        "mae_cidade_casos_mes": 119.0474157453008,
+        "pico_real": 7,
+        "pico_previsto": 5,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      },
+      "random_forest": {
+        "f1_macro": 0.3626183862379347,
+        "recall_alto": 0.0603448275862069,
+        "spearman_bairros": 0.5475966034042032,
+        "mae_casos_mes": 3.502135225938242,
+        "mae_cidade_casos_mes": 292.2576765997084,
+        "pico_real": 7,
+        "pico_previsto": 6,
+        "pico_acerto": 0.0,
+        "n_linhas": 658,
+        "n_meses": 7,
+        "limiares": [
+          1.0833333333333333,
+          6.5
+        ],
+        "distribuicao_real": {
+          "0": 393,
+          "1": 149,
+          "2": 116
+        }
+      }
+    }
+  },
+  "metodo_escolhido_por": "Backtest A (F1-macro mensal); o Backtest B não participou da escolha"
+}
