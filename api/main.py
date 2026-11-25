@@ -1,7 +1,8 @@
-"""API FastAPI do AnteceDengue: serve o modelo champion, as previsões em lote e os dados do sensor.
+"""API FastAPI do AnteceDengue: serve o modelo champion, as previsões em lote e as leituras da estação simulada.
 
 O campo risk_score é um índice de ordenação de 0 a 100, não calibrado (não é probabilidade de surto).
-As leituras do sensor são exibidas, mas não entram na previsão.
+As leituras da estação simulada (API Open-Meteo via MQTT; não há sensor físico) são exibidas, mas não entram na
+previsão.
 """
 import datetime as dt
 import logging
@@ -26,8 +27,8 @@ log = logging.getLogger("api")
 DESCRICAO = (
     "Previsão de risco de dengue por bairro do Recife para a semana seguinte (t+1).\n\n"
     "**Atenção:** `risk_score` é um índice de ordenação de 0 a 100 (50*prob_medio + 100*prob_alto), "
-    "**não calibrado**; não é probabilidade de surto. As leituras do sensor são exibidas, mas **não entram na "
-    "previsão**. A previsão vale para a semana seguinte à última semana presente nos dados."
+    "**não calibrado**; não é probabilidade de surto. As leituras da estação simulada (dados da API Open-Meteo via MQTT; não há sensor físico) são exibidas, mas "
+    "**não entram na previsão**. A previsão vale para a semana seguinte à última semana presente nos dados."
 )
 
 
@@ -170,10 +171,12 @@ def create_app(loaded: LoadedModel | None = None, repository: Repository | None 
         return PredictResponse(model=m.meta["model_name"], predictions=linhas)
 
     @app.get("/sensor/weekly", response_model=SensorWeeklyResponse, tags=["Sensor"],
-             summary="Leituras semanais agregadas do sensor",
-             description="Média de temperatura e umidade, chuva total, nº de leituras e menor bateria por bairro e "
-                         "semana (domingo a sábado, America/Recife). Exibidas, mas não entram na previsão.",
-             responses={404: {"description": "Bairro inexistente."}, 503: {"description": "Banco do sensor fora do ar."}})
+             summary="Leituras semanais agregadas da estação simulada",
+             description="Estação simulada alimentada pela API Open-Meteo (Weather data by Open-Meteo.com; precipitação modelada, "
+                         "não medida). Média de temperatura e umidade, chuva total, nº de leituras e campo de bateria "
+                         "(sem sentido físico na simulação) por bairro e semana (domingo a sábado, America/Recife). "
+                         "Exibidas, mas não entram na previsão.",
+             responses={404: {"description": "Bairro inexistente."}, 503: {"description": "Banco das leituras fora do ar."}})
     def sensor_weekly(request: Request, bairro: str | None = Query(None, description="Filtra por bairro."),
                       desde: dt.date | None = Query(None, description="Semana inicial (inclusive), aaaa-mm-dd.")):
         r = repo(request)

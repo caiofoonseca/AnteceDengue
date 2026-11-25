@@ -2,7 +2,8 @@
 
 Uso: streamlit run app/dashboard.py
 O dashboard fala sempre em "índice de risco" (0 a 100, não calibrado). Não é monitoramento em tempo real
-nem diagnóstico. As leituras do sensor são exibidas como monitoramento de microclima e não alimentam o modelo.
+nem diagnóstico. A aba Sensor mostra uma estação simulada alimentada pela API Open-Meteo (não há sensor físico); essas
+leituras não alimentam o modelo.
 """
 import os
 import sys
@@ -42,7 +43,7 @@ def show_map(figura) -> None:
 
 def show_api_down(erro: ApiUnavailable, com_cabecalho: bool = True) -> None:
     if com_cabecalho:
-        ui.render(ui.hero(simulated=ui.simulated_source()))
+        ui.render(ui.hero(simulated=ui.simulated_source(), label=ui.source_label() or ""))
     st.error(f"Não consegui falar com a API em **{erro.base_url}** ({erro.motivo}).")
     st.markdown(
         "Suba a API com `uvicorn api.main:app` ou ajuste a variável de ambiente `API_URL` com o endereço certo, "
@@ -203,7 +204,7 @@ def tab_bairro(pred: dict) -> None:
     sensor = data.sensor_frame(detalhe["sensor_semanal"])
     if not sensor.empty:
         with st.container(border=True, key="card_bairro_sensor"):
-            ui.render(ui.card_title("Microclima medido pelo sensor neste bairro", "não alimenta o modelo"))
+            ui.render(ui.card_title("Leituras da estação simulada (Open-Meteo) neste bairro", "não alimenta o modelo"))
             st.dataframe(sensor.drop(columns="bairro").assign(semana=sensor["semana"].dt.strftime("%d/%m/%Y")),
                          hide_index=True, width="stretch")
 
@@ -222,13 +223,15 @@ def sensor_chart(recorte: pd.DataFrame, coluna: str, titulo: str, barras: bool =
 
 
 def tab_sensor() -> None:
-    st.subheader("Sensor: monitoramento de microclima")
-    st.info("As leituras do sensor são exibidas aqui como monitoramento de microclima. **Elas não alimentam o "
-            "modelo de risco**: o modelo usa só casos e clima de reanálise.", icon="📡")
-    fonte = os.getenv("SENSOR_FONTE", "real")
+    st.subheader("Estação simulada: leituras da API Open-Meteo")
+    st.info("Não há sensor físico. Uma estação simulada consulta a API pública Open-Meteo (temperatura, umidade e "
+            "precipitação, dados de modelo e reanálise, não medições) e publica as leituras via MQTT; elas são gravadas "
+            "no banco e agregadas por semana. **Elas não alimentam o modelo de risco**: o modelo usa só casos e clima "
+            "de reanálise. [Weather data by Open-Meteo.com](https://open-meteo.com/) (uso não comercial).", icon="📡")
+    fonte = os.getenv("SENSOR_FONTE", "open-meteo")
     if data.sensor_is_test(fonte):
-        st.warning(f"As leituras mostradas vêm de dados **{fonte}** (simulados ou de teste), não de estações reais. "
-                   "Defina SENSOR_FONTE=real quando houver estações reais enviando dados.", icon="🧪")
+        st.warning(f"As leituras mostradas vêm de dados **{fonte}** (sintéticos, sorteados, sem relação com o tempo "
+                   "real). Use SENSOR_FONTE=open-meteo para ver as leituras da API.", icon="🧪")
     try:
         itens = get("/sensor/weekly")["items"]
     except ApiError as erro:
@@ -236,18 +239,18 @@ def tab_sensor() -> None:
         return
     frame = data.sensor_frame(itens)
     if frame.empty:
-        st.info("As estações ainda não enviaram leituras. Quando o ingestor MQTT gravar leituras válidas e a "
-                "agregação semanal rodar, as séries aparecem aqui.")
+        st.info("A estação simulada ainda não publicou leituras. Quando o publicador estiver rodando, o ingestor MQTT "
+                "gravar leituras válidas e a agregação semanal rodar, as séries aparecem aqui.")
         return
     estado = data.sensor_status(frame)
     ultima = data.format_date(frame["semana"].max())
     ui.render(ui.kpi_grid([
-        ui.kpi_card("Bairros com leituras", str(len(estado)), "estações com dados semanais"),
+        ui.kpi_card("Bairros com leituras", str(len(estado)), "estação simulada com dados semanais"),
         ui.kpi_card("Última semana com dados", ultima, "início da semana (domingo)", texto=True),
-        ui.kpi_card("Bateria mínima", f"{ui.fmt_num(estado['bateria mínima (V)'].min(), 2)} V",
-                    "menor tensão registrada")]))
+        ui.kpi_card("Leituras na última semana", str(int(estado["leituras na última semana"].sum())),
+                    "soma das leituras da última semana de cada bairro")]))
     with st.container(border=True, key="card_sensor_estado"):
-        ui.render(ui.card_title("Estado das estações", "um resumo por bairro"))
+        ui.render(ui.card_title("Estado da estação simulada", "um resumo por bairro"))
         st.dataframe(ui.sensor_status_view(estado), hide_index=True, width="stretch")
     bairros = st.multiselect("Bairros", sorted(frame["bairro"].unique()), default=sorted(frame["bairro"].unique()),
                              key="sensor_bairros")
@@ -323,7 +326,7 @@ def main() -> None:
     except ApiError as erro:
         pred, frame, aviso = None, data.predictions_frame({"predictions": []}), erro.detail
     semanas = (pred["week_start"], pred["target_week"]) if pred else (None, None)
-    ui.render(ui.hero(*semanas, simulated=ui.simulated_source()))
+    ui.render(ui.hero(*semanas, simulated=ui.simulated_source(), label=ui.source_label() or ""))
     auth.session_bar(usuario)
     if aviso:
         st.warning(aviso)

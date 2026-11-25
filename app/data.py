@@ -13,6 +13,7 @@ COLOR_SCALE = "Oranges"
 RISK_RANGE = (0, 100)
 GEOJSON_PATH = Path(__file__).resolve().parent / "assets" / "bairros.geojson"
 SENSOR_TEST_SOURCES = ("simulado", "simulador", "teste", "sintetico", "sintético")
+SENSOR_API_SOURCES = ("open-meteo", "openmeteo", "api")
 
 
 def format_date(valor) -> str:
@@ -121,6 +122,10 @@ def sensor_is_test(source: str | None) -> bool:
     return (source or "").strip().lower() in SENSOR_TEST_SOURCES
 
 
+def sensor_is_open_meteo(source: str | None) -> bool:
+    return (source or "").strip().lower() in SENSOR_API_SOURCES
+
+
 def model_comparison_table(info: dict) -> pd.DataFrame:
     """RandomForest x persistência na validação e no teste (F1-macro e recall da classe alto)."""
     val, teste = info["validation_metrics"], info["test_metrics"]
@@ -162,7 +167,7 @@ LIMITATIONS = [
     "O modelo depende dos casos recentes do próprio bairro (médias móveis, caso atual e média histórica); se os "
     "casos chegam com atraso, a previsão também atrasa.",
     "A previsão vale para a semana seguinte à última semana dos dados, não para a semana atual do calendário.",
-    "As leituras do sensor são exibidas, mas não alimentam o modelo.",
+    "As leituras da estação simulada (API Open-Meteo via MQTT) são exibidas, mas não alimentam o modelo.",
 ]
 
 

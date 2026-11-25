@@ -14,7 +14,7 @@ class HealthResponse(BaseModel):
     status: str = Field(description="'ok' se tudo responde; 'degradado' se algo opcional está fora.")
     model_loaded: bool = Field(description="Se o modelo foi carregado na inicialização.")
     model_source: str = Field(description="De onde o modelo foi carregado (Registry ou arquivo).")
-    sensor_db: bool = Field(description="Se o banco das leituras do sensor responde.")
+    sensor_db: bool = Field(description="Se o banco das leituras da estação simulada responde.")
     predictions_file: bool = Field(description="Se existe o arquivo de previsões em lote.")
     model_config = {"protected_namespaces": (), "json_schema_extra": {"examples": [{
         "status": "ok", "model_loaded": True, "model_source": "arquivo best_model.joblib", "sensor_db": True,
@@ -83,21 +83,21 @@ class SensorSemana(BaseModel):
     umid_media: float | None
     chuva_mm: float | None = Field(description="Chuva total da semana (soma das leituras).")
     n_leituras: int
-    bateria_min: float | None
+    bateria_min: float | None = Field(None, description="Campo do contrato MQTT; na simulação é constante e sem sentido físico.")
 
 
 class BairroDetail(BaseModel):
     bairro: str
     previsao: PredictionItem | None
     casos_semanais: list[CasosSemana] = Field(description="Últimas 26 semanas do painel.")
-    sensor_semanal: list[SensorSemana] = Field(description="Leituras do sensor: exibidas, mas NÃO entram na previsão.")
+    sensor_semanal: list[SensorSemana] = Field(description="Leituras da estação simulada (Open-Meteo via MQTT): exibidas, mas NÃO entram na previsão.")
     nota: str | None = None
 
 
 class SensorWeeklyResponse(BaseModel):
     total: int
     items: list[SensorSemana]
-    nota: str = "As leituras do sensor são exibidas, mas não entram na previsão do modelo."
+    nota: str = "As leituras da estação simulada são exibidas, mas não entram na previsão do modelo."
 
 
 class PredictRequest(BaseModel):

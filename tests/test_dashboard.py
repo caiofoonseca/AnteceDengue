@@ -221,7 +221,7 @@ def test_dashboard_caminho_feliz(monkeypatch):
     html = " ".join(e.value for e in at.markdown if isinstance(e.value, str))
     assert "Bairros em risco Alto" in html and "Maior índice de risco" in html and "Top 5 bairros" in html
     assert "RandomForest" in html and "1 (champion)" in html and "Versão no Registry" in html
-    assert "Como ler" in html and "Estado das estações" in html
+    assert "Como ler" in html and "Estado da estação simulada" in html
     for trecho in re.finditer("probabilidade de surto", html.lower()):
         assert "não" in html.lower()[max(0, trecho.start() - 8):trecho.start()]
 
@@ -248,7 +248,7 @@ def test_sensor_sem_dados_explica(monkeypatch):
     instalar_api(monkeypatch, sensor=[])
     at = rodar()
     assert not at.exception
-    assert any("ainda não enviaram leituras" in i.value for i in at.info)
+    assert any("ainda não publicou leituras" in i.value for i in at.info)
     assert any("não alimentam o modelo" in i.value for i in at.info)
 
 
@@ -257,7 +257,7 @@ def test_sensor_de_teste_mostra_aviso(monkeypatch):
     instalar_api(monkeypatch)
     at = rodar()
     assert not at.exception
-    assert any("simulados ou de teste" in w.value for w in at.warning)
+    assert any("sintéticos" in w.value for w in at.warning)
 
 
 def test_api_fora_do_ar_mostra_mensagem_amigavel(monkeypatch):
@@ -341,7 +341,7 @@ def test_tabelas_de_exibicao_das_outras_abas():
     visao = ui.comparison_table_view(data.model_comparison_table(MODEL_INFO))
     assert visao.loc[0, "RandomForest (teste)"] == "0,611" and visao.loc[0, "métrica"] == "F1-macro"
     estado = ui.sensor_status_view(data.sensor_status(data.sensor_frame(SENSOR_ITEMS)))
-    assert list(estado.columns)[0] == "Bairro" and estado.loc[0, "Bateria mínima (V)"] == "3,70"
+    assert list(estado.columns)[0] == "Bairro" and "Bateria mínima (V)" not in estado.columns
 
 
 def test_rodape_com_fontes_aviso_e_link_da_api(monkeypatch):
@@ -349,7 +349,8 @@ def test_rodape_com_fontes_aviso_e_link_da_api(monkeypatch):
     monkeypatch.setenv("API_PUBLIC_URL", "http://localhost:8000/")
     rodape = ui.footer()
     for trecho in ("Portal de Dados Abertos do Recife", "InfoDengue", "Open-Meteo", "não probabilidade de surto",
-                   "http://localhost:8000/docs", "não alimentam o modelo"):
+                   "http://localhost:8000/docs", "não alimentam o modelo", "Weather data by Open-Meteo.com",
+                   "https://open-meteo.com/"):
         assert trecho in rodape
     assert chr(10) not in rodape
 
@@ -461,3 +462,21 @@ def test_painel_abre_sem_login_quando_desligado(monkeypatch):
     assert not at.exception and not at.error
     html = " ".join(m.value for m in at.markdown)
     assert "login desligado" in html and "Conectado como" not in html
+
+
+def test_selo_da_fonte_do_sensor(monkeypatch):
+    assert ui.source_label() == "Estação simulada · Open-Meteo" and ui.simulated_source()
+    monkeypatch.setenv("SENSOR_FONTE", "simulado")
+    assert ui.source_label() == "Dados simulados"
+    monkeypatch.setenv("SENSOR_FONTE", "real")
+    assert ui.source_label() is None and not ui.simulated_source()
+    assert "Estação simulada" in ui.hero("2025-08-17", "2025-08-24", simulated=True, label="Estação simulada · Open-Meteo")
+
+
+def test_aba_sensor_explica_a_estacao_simulada_e_credita_a_open_meteo(monkeypatch):
+    instalar_api(monkeypatch)
+    at = rodar()
+    textos = " ".join(i.value for i in at.info)
+    assert "Não há sensor físico" in textos and "Weather data by Open-Meteo.com" in textos
+    assert "não alimentam o modelo" in textos.lower() or "não alimentam o modelo de risco" in textos.lower()
+    assert not any("sintéticos" in w.value for w in at.warning)

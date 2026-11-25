@@ -52,16 +52,26 @@ def badge(texto: str, tipo: str = "accent") -> str:
 
 
 def simulated_source() -> bool:
-    return data.sensor_is_test(os.getenv("SENSOR_FONTE", "real"))
+    return source_label() is not None
 
 
-def hero(week_start=None, target_week=None, simulated: bool = False) -> str:
+def source_label() -> str | None:
+    """Texto do selo do cabeçalho conforme SENSOR_FONTE (padrão open-meteo); None quando não há selo."""
+    fonte = os.getenv("SENSOR_FONTE", "open-meteo")
+    if data.sensor_is_test(fonte):
+        return "Dados simulados"
+    if data.sensor_is_open_meteo(fonte):
+        return "Estação simulada · Open-Meteo"
+    return None
+
+
+def hero(week_start=None, target_week=None, simulated: bool = False, label: str = "Dados simulados") -> str:
     selos = []
     if week_start and target_week:
         selos.append(badge(f"Previsão para a semana de {data.format_date(target_week)}", "accent"))
         selos.append(badge(f"Semana base: {data.format_date(week_start)}", "neutral"))
     if simulated:
-        selos.append(badge("Dados simulados", "warn"))
+        selos.append(badge(label, "warn"))
     return ('<header class="hero"><div class="hero-brand">' + logo_mark(60) +
             f'<div><div class="hero-title">{wordmark(True)}</div><div class="hero-tagline">{esc(TAGLINE)}</div></div></div>'
             f'<div class="hero-badges">{"".join(selos)}</div></header>')
@@ -187,12 +197,11 @@ MODEL_COLORS = {"RandomForest": "#0f766e", "Persistência": "#a3adb5"}
 
 
 def sensor_status_view(estado: pd.DataFrame) -> pd.DataFrame:
-    """Tabela de estado das estações com cabeçalhos em português e a tensão com vírgula."""
+    """Tabela de estado da estação simulada com cabeçalhos em português (sem bateria: o campo não tem sentido na simulação)."""
     return pd.DataFrame({
         "Bairro": estado["bairro"], "Última semana": estado["última semana"],
         "Leituras na última semana": estado["leituras na última semana"],
-        "Semanas com dados": estado["semanas com dados"],
-        "Bateria mínima (V)": estado["bateria mínima (V)"].map(lambda v: fmt_num(v, 2))})
+        "Semanas com dados": estado["semanas com dados"]})
 
 
 def comparison_table_view(tabela: pd.DataFrame) -> pd.DataFrame:
@@ -209,9 +218,11 @@ def footer() -> str:
     return ('<div class="site-footer" role="contentinfo">'
             f'<div class="footer-brand">{logo_mark(24)}{wordmark()}<span>Projeto G15 · CESAR School</span></div>'
             '<p><strong>Fontes dos dados.</strong> Casos: Portal de Dados Abertos do Recife (licença ODbL). '
-            'Temperatura e umidade: InfoDengue. Chuva: Open-Meteo, estimada por reanálise (ERA5), não é medição de estação.</p>'
+            'Temperatura e umidade: InfoDengue. Chuva: Open-Meteo, estimada por reanálise (ERA5), não é medição de estação. '
+            'A aba Sensor mostra uma estação simulada alimentada pela API Open-Meteo: <a href="https://open-meteo.com/" '
+            'target="_blank" rel="noopener noreferrer">Weather data by Open-Meteo.com</a> (uso não comercial).</p>'
             '<p><strong>Aviso.</strong> O índice de risco é um índice de ordenação, não probabilidade de surto: serve para '
             'comparar bairros entre si e não é calibrado. Não é diagnóstico nem monitoramento em tempo real. '
-            'As leituras do sensor não alimentam o modelo.</p>'
+            'As leituras da estação simulada não alimentam o modelo.</p>'
             f'<p><a href="{esc(api_docs_url())}" target="_blank" rel="noopener noreferrer">Documentação da API</a></p>'
             '</div>')
