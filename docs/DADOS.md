@@ -46,6 +46,16 @@ python scripts/build_clima.py --sem-download   # só reprocessa os brutos já em
 ```
 Brutos ficam em `data/raw/clima/` (fora do git). Para refazer a validação com o INMET: `python -c "from src import data_clima as c; [c.download_inmet_year(y) for y in range(2015, 2022)]"` (cada zip tem ~100 MB).
 
+## Estação simulada (Open-Meteo via MQTT)
+
+**Decisão (25/11/2026, orientação do professor):** o projeto não usa ESP32 nem sensor físico. A aquisição é uma estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT.
+
+- Fluxo: API Open-Meteo (`https://api.open-meteo.com/v1/forecast`, temperatura, umidade e precipitação atuais, fuso America/Recife) -> publicador (`scripts/sim_publisher.py`) -> MQTT/Mosquitto -> ingestor -> Postgres (`sensor_readings`) -> `sensor_weekly` -> `data/processed/sensor_semanal.csv`.
+- Coordenadas das estações em `config/stations_bairros.json`. O contrato do payload MQTT não mudou; `battery_voltage` é só um campo fixo do contrato, sem sentido físico.
+- O MQTT e o `sensor_semanal.csv` NÃO alimentam o treino do modelo (o histórico é de poucas semanas e a chuva de treino é a reanálise ERA5). Servem ao dashboard e à demonstração da infraestrutura.
+- A precipitação da Open-Meteo vem de modelo/reanálise, não é observação. A API gratuita é só para uso não comercial. Crédito: **Weather data by [Open-Meteo.com](https://open-meteo.com)** (CC BY 4.0).
+- Sensores reais: trabalho futuro.
+
 ## Limites dos bairros (mapa do dashboard)
 - Fonte: Portal de Dados Abertos do Recife (https://dados.recife.pe.gov.br), conjunto "Área urbana", recurso "Bairros do Recife" (GeoJSON), obtido via API CKAN em 24/11/2026.
 - Licença: ODbL (Open Database License), conferida em 24/11/2026 nos metadados do conjunto "Área urbana" no portal (`license_id = odc-odbl`).

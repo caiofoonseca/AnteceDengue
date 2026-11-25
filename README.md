@@ -66,9 +66,13 @@ python -m src.predict_batch --no-registry # só models/best_model.joblib
 
 Grava `data/processed/predictions_latest.csv` (um bairro por linha, ordenado por `rank`, 1 = maior risco) com a previsão da semana seguinte à última semana dos dados. `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100, não uma probabilidade. A previsão vale para a última semana presente nos dados (hoje 2025-08-17), os casos chegam dos CSVs anuais com atraso e o sensor não alimenta o modelo.
 
-## Sensor: ingestor MQTT e agregação semanal
+## Estação simulada: Open-Meteo, MQTT e agregação semanal
 
-As leituras do sensor (ESP32) NÃO alimentam o modelo; servem ao dashboard e à demonstração. Estação -> bairro em `config/stations_bairros.json` (edite com os `station_id` reais; os bairros precisam existir no painel).
+Não há sensor físico nem ESP32 (decisão do professor orientador, 25/11/2026): a aquisição é uma **estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT**. Fluxo: API Open-Meteo -> publicador (`scripts/sim_publisher.py`, `--source api`, padrão) -> MQTT/Mosquitto -> ingestor -> Postgres -> `sensor_weekly` -> `data/processed/sensor_semanal.csv`. Sensores reais ficam como trabalho futuro.
+
+As leituras NÃO alimentam o modelo (nem o `sensor_semanal.csv`); servem ao dashboard e à demonstração da infraestrutura. A precipitação da Open-Meteo vem de modelo/reanálise, não é observação, e a API gratuita é só para uso não comercial. **Weather data by [Open-Meteo.com](https://open-meteo.com)** (CC BY 4.0).
+
+O CSV semanal (bairro, semana_inicio, temp_media, umid_media, chuva_mm_soma, n_leituras, fonte) é gerado por `python -m src.export_sensor_csv` (no compose: `docker compose --profile export run --rm export-sensor`; no Airflow, última tarefa do DAG semanal). `--source synthetic` do publicador gera valores sorteados e serve só como fallback offline. Estação -> bairro em `config/stations_bairros.json` (edite com os `station_id` reais; os bairros precisam existir no painel).
 
 ```powershell
 python -m src.ingest_mqtt --host localhost --port 1883   # assina antecedengue/estacoes/+/leituras (QoS 1); Ctrl+C encerra
@@ -106,7 +110,7 @@ O dashboard consome só a API. Em dois terminais, com o ambiente virtual ativo:
 uvicorn api.main:app --port 8000
 streamlit run app/dashboard.py
 ```
-Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`real` por padrão; com `simulado` ou `teste` a aba Sensor avisa que os dados não são de estações reais). Se a API estiver fora do ar, o dashboard mostra o endereço tentado. O acesso exige login: defina `DASHBOARD_USER` e `DASHBOARD_PASSWORD` no `.env` (sem esses valores, ou com a senha de exemplo, o acesso fica fechado). O login protege só a interface do dashboard; a API (porta 8000) tem as regras dela. A identidade visual (logo em `app/assets/logo.svg`, tema em `.streamlit/config.toml` e `app/assets/style.css`) não usa fontes nem imagens externas.
+Abre em http://localhost:8501 com cinco abas: Mapa de risco, Ranking, Bairro, Sensor e Modelo. Variáveis: `API_URL` (padrão `http://localhost:8000`) e `SENSOR_FONTE` (`open-meteo` por padrão: a aba Sensor mostra o selo "estação simulada, dados Open-Meteo"; com `simulado`, `teste` ou `sintetico` avisa que os dados são sintéticos). Se a API estiver fora do ar, o dashboard mostra o endereço tentado. O acesso exige login: defina `DASHBOARD_USER` e `DASHBOARD_PASSWORD` no `.env` (sem esses valores, ou com a senha de exemplo, o acesso fica fechado). O login protege só a interface do dashboard; a API (porta 8000) tem as regras dela. A identidade visual (logo em `app/assets/logo.svg`, tema em `.streamlit/config.toml` e `app/assets/style.css`) não usa fontes nem imagens externas.
 
 Sempre se fala em "índice de risco" (0 a 100, não calibrado), com a semana base e a semana prevista no topo de cada aba; não é monitoramento em tempo real nem diagnóstico. O mapa usa os limites oficiais dos bairros (`app/assets/bairros.geojson`, ver `docs/DADOS.md`) e os tiles do mapa precisam de internet. Para refazer o GeoJSON: `python scripts/build_bairros_geojson.py`. Para gravar a persistência da validação em `models/model_meta.json` sem retreinar: `python scripts/patch_meta_persistencia.py` (novas execuções de `src.final` já gravam).
 
@@ -122,12 +126,12 @@ docker compose ps                          # todos devem estar healthy
 ```
 Pré-requisito: `models/` e `data/processed/` gerados (a API os monta somente leitura).
 
-- Demonstração com leituras simuladas: `SENSOR_FONTE=simulado docker compose --profile demo up -d`. Depois, `docker compose exec api python -m src.sensor_agg` agrega as leituras por semana e bairro. Os dados são simulados e o dashboard avisa.
+- Estação simulada (dados da Open-Meteo via MQTT): `docker compose --profile demo up -d` (`SENSOR_FONTE=open-meteo`, padrão). Depois, `docker compose exec api python -m src.sensor_agg` agrega as leituras por semana e bairro e `docker compose --profile export run --rm export-sensor` gera `data/processed/sensor_semanal.csv`. Precisa de internet.
 - Reexecutar os experimentos 01, 02 e 03 (nunca `--final`): `docker compose --profile train run --rm trainer` (relatórios no volume `trainer-reports`).
 - Teste de integração do ingestor contra o Mosquitto do compose: `MQTT_HOST=localhost pytest -m integration`.
 - Postgres do compose em `127.0.0.1:5433` (variável `POSTGRES_HOST_PORT`); MLflow em http://localhost:5000.
 - Logs: `docker compose logs -f ingestor`. Parar: `docker compose down` (mantém os dados). Apagar também os volumes (banco, MLflow, Mosquitto): `docker compose down -v`.
-- **Rede:** API e dashboard publicam só em `127.0.0.1`. Para liberar na rede, defina `BIND_ADDRESS=0.0.0.0` no `.env` (a API não tem autenticação e o login do dashboard é simples; use só em rede de demonstração). O Mosquitto fica em `0.0.0.0:1883` porque a ESP32 precisa se conectar. As portas do host são configuráveis: `API_HOST_PORT`, `DASHBOARD_HOST_PORT`, `MLFLOW_HOST_PORT`, `MQTT_HOST_PORT`, `POSTGRES_HOST_PORT`.
+- **Rede:** API e dashboard publicam só em `127.0.0.1`. Para liberar na rede, defina `BIND_ADDRESS=0.0.0.0` no `.env` (a API não tem autenticação e o login do dashboard é simples; use só em rede de demonstração). O Mosquitto fica em `0.0.0.0:1883` para aceitar um publicador de outra máquina da rede (com a estação simulada, o publicador roda no próprio compose). As portas do host são configuráveis: `API_HOST_PORT`, `DASHBOARD_HOST_PORT`, `MLFLOW_HOST_PORT`, `MQTT_HOST_PORT`, `POSTGRES_HOST_PORT`.
 - **Login do dashboard:** usuário em `DASHBOARD_USER` (padrão `g15`) e senha em `DASHBOARD_PASSWORD` (gerada pelo `setup_env.py`). `DASHBOARD_AUTH=off` desliga o login só para demonstração (padrão: ligado).
 - O Mosquitto aceita conexões anônimas (só para desenvolvimento). A pilha usa cerca de 0,8 GiB no total; nenhum serviço passa de 1 GiB.
 
@@ -146,7 +150,7 @@ A interface abre em http://localhost:8080 (ou na porta de `AIRFLOW_HOST_PORT`). 
 
 Testar um DAG sem esperar o agendamento: `docker compose --profile airflow exec airflow-scheduler airflow dags test antecedengue_semanal 2026-11-24` (o de treino aceita `--conf '{"n_iter": 2}'`). Testes dos DAGs dentro do container: `docker compose --profile airflow exec -w /opt/airflow/project airflow-scheduler python -m pytest tests/test_dags.py`. Só o download (`refresh=true` ou arquivo faltando) precisa de internet.
 
-**Demonstração em um comando** (sobe a pilha, semeia o MLflow se preciso, reinicia a API, liga o simulador com `SENSOR_FONTE=simulado` e imprime as URLs):
+**Demonstração em um comando** (sobe a pilha, semeia o MLflow se preciso, reinicia a API, liga a estação simulada (Open-Meteo via MQTT), gera o CSV semanal e imprime as URLs):
 ```
 powershell -ExecutionPolicy Bypass -File scripts\demo.ps1 [-Airflow]
 scripts/demo.sh [--airflow]

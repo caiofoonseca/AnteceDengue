@@ -3,7 +3,7 @@
 ## Projeto
 - Previsão de risco de dengue por bairro do Recife. Trabalho da CESAR School que vale para Aprendizado de Máquina (AV2) e Sistemas Embarcados.
 - Entrega: 11/12/2026 às 23:59, com relatório em PDF no template SBC e link deste repositório.
-- Este repositório cobre só a parte de ML e MLOps. O sensor (ESP32) é feito por outra equipe, que só publica mensagens MQTT.
+- Este repositório cobre só a parte de ML e MLOps. Não há ESP32 nem hardware (decisão do professor orientador, 25/11/2026): a aquisição é uma estação simulada que publica no MQTT dados reais da API Open-Meteo (ver "Decisões da estação simulada").
 
 ## Decisões de ML (não mudar sem avisar o Caio)
 - Problema: classificação. Prever a classe de risco da semana t+1 por bairro: 0 = baixo, 1 = médio, 2 = alto.
@@ -28,7 +28,7 @@
 - Cauda de 2025: casos recentes demoram a ser classificados (CLASSI_FIN nula ou 8), o que deixa as últimas semanas artificialmente baixas. PANEL_END = 2025-08-17 (config.py): última semana em que a fração de registros nulos/inconclusivos ainda fica dentro de referência (média jan–jun/2025 = 0,27%) + 5 pontos percentuais (limite 5,27%). O painel é cortado nessa semana. Ver reports/cauda_2025.md.
 
 ## Decisões de ML (passo 5)
-- A chuva do treino é reanálise ERA5 (Open-Meteo), em escala diferente do pluviômetro do ESP32. Features do sensor NÃO entram no treino do modelo; o sensor só alimenta a demonstração ao vivo e o dashboard.
+- A chuva do treino é reanálise ERA5 (Open-Meteo), em escala diferente das leituras da estação simulada. Features do sensor NÃO entram no treino do modelo; o sensor só alimenta a demonstração ao vivo e o dashboard.
 - Nulos de temperatura e umidade: preencher só com valores do passado (forward fill causal, limite de 2 semanas) antes de calcular os lags. O que restar de nulo fica para um SimpleImputer dentro do Pipeline do scikit-learn, ajustado só no treino.
 - Classes desbalanceadas (~72/17/10): usar class_weight="balanced" quando o modelo suportar. Métrica de seleção: F1-macro; acompanhar também o recall da classe alto.
 - Regra dos rótulos: baixo = casos <= q_mid; médio = casos <= q_high; alto = acima. Limiares estritamente crescentes (src/labels.py), ajustados só nos alvos do treino de cada split.
@@ -77,7 +77,7 @@
 MLflow, Airflow (DAG semanal), MQTT com Mosquitto, Postgres, FastAPI, dashboard em Streamlit, tudo subindo com um único docker compose up. O modelo é salvo com joblib, e a versão do scikit-learn deve ser a mesma em todos os containers.
 
 ## Estrutura de pastas planejada
-src/ (config.py, dados, features, rótulos, validação, modelos, treino, predição), api/, app/, dags/, embedded/ (simulador), docker/, notebooks/, reports/, docs/, tests/.
+src/ (config.py, dados, features, rótulos, validação, modelos, treino, predição), api/, app/, dags/, embedded/ (README; o publicador está em src/api_publisher.py e scripts/sim_publisher.py), docker/, notebooks/, reports/, docs/, tests/.
 
 ## Convenções
 - Python 3.11. SEED = 42. Constantes e caminhos centralizados em src/config.py.
@@ -107,7 +107,7 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Uma imagem só (`Dockerfile`, python:3.11-slim, usuário sem privilégios), com `requirements-runtime.txt` e scikit-learn fixado em 1.9.1 (igual a `model_meta.json`; um teste confere). `models/` e `data/processed/` entram na API por montagem somente leitura.
 - Portas: Postgres e MLflow só em 127.0.0.1. O Postgres do host já ocupava a 5432 nesta máquina, então a porta publicada é `POSTGRES_HOST_PORT` (padrão 5433). Dentro da rede do compose continua 5432.
 - MLflow com `--workers 1` e `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false`: com os padrões ele subia vários workers e consumidores de jobs e passava de 2,4 GiB; assim fica perto de 370 MiB.
-- O dashboard lê `SENSOR_FONTE` do ambiente do compose; com o simulador, suba com `SENSOR_FONTE=simulado docker compose --profile demo up -d` (um serviço de perfil não consegue mudar o ambiente de outro). `scripts/sim_publisher.py` é ferramenta de desenvolvimento e publica só dados simulados.
+- O dashboard lê `SENSOR_FONTE` do ambiente do compose; com a estação simulada, suba com `SENSOR_FONTE=open-meteo docker compose --profile demo up -d` (padrão; `simulado` só para o modo sintético offline) (um serviço de perfil não consegue mudar o ambiente de outro). `scripts/sim_publisher.py` usa a API Open-Meteo por padrão (`--source api`); `--source synthetic` gera valores sorteados e serve só como fallback offline.
 - A API carrega o modelo uma vez na partida: depois de rodar o seed pela primeira vez, reinicie a API (`docker compose restart api`), senão ela fica no fallback do joblib.
 
 ## Decisões do Airflow (passo 14)
@@ -123,11 +123,19 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 ## Decisões do dashboard: identidade e login
 - Marca: logo SVG próprio (`app/assets/logo.svg`, gota com tendência de alta e ondas de alerta) embutido no HTML; cabeçalho em verde-azulado profundo com o nome "AnteceDengue". Sem fontes nem imagens externas.
 - Login (`app/auth.py`): usuário e senha só do ambiente (`DASHBOARD_USER`, `DASHBOARD_PASSWORD`, no `.env`). Sem credenciais válidas, ou com a senha de exemplo, o acesso fica fechado (nunca aberto). Comparação em tempo constante e bloqueio de 30 s após 5 falhas por sessão. Protege só a interface; a API continua aberta na porta 8000.
-- `.gitignore` tem a seção "# Embarcados e segredos" (secrets.h, .pio/, .env.*, *.bak); `.env.example` continua versionado.
+- `.gitignore` tem a seção "# Embarcados e segredos" (secrets.h, .pio/, .env.*, *.bak; as regras de secrets.h e .pio/ são só precaução); `.env.example` continua versionado.
 
 ## Limitações conhecidas
 - O IC do teste vem do bootstrap em blocos de 4 semanas ([+0,021, +0,054]); com blocos de 1 semana fica [+0,017, +0,061] e com 2 semanas [+0,020, +0,057].
 - As estatísticas da EDA só reproduzem excluindo as 8 primeiras semanas do painel; sem essa exclusão os limiares viram (0, 2) e a persistência 76,1%.
 - Mosquitto anônimo e dashboard com login simples (usuário e senha do `.env`) são só para desenvolvimento e demonstração; a API não tem autenticação. API e dashboard publicam em 127.0.0.1 por padrão (`BIND_ADDRESS`).
 - O modelo final e os dados processados são versionados; `--final` não pode ser repetido (a guarda do teste recusa).
+
+## Decisões da estação simulada (Open-Meteo)
+- Decisão do professor orientador (25/11/2026): o projeto não usa ESP32 nem hardware. A aquisição é uma estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT. Texto padrão: "estação simulada alimentada por dados da API Open-Meteo, publicados via MQTT". Sensores reais ficam como trabalho futuro.
+- Fluxo: API Open-Meteo -> publicador (`src/api_publisher.py`, `scripts/sim_publisher.py --source api`) -> MQTT/Mosquitto -> ingestor -> Postgres -> sensor_weekly -> `src/export_sensor_csv.py` -> `data/processed/sensor_semanal.csv`. Contrato do payload e tópico não mudaram. Esse CSV NÃO entra no treino.
+- Coordenadas por estação em `config/stations_bairros.json` (chave "coordinates"). Timestamp publicado = instante da consulta (UTC); rainfall_mm = precipitação do bloco de 15 min da API, contada uma vez; battery_voltage é valor fixo sem sentido físico (4.0). Máximo de 1 chamada por estação por minuto, timeout e repetição com espera crescente; falha da API pula a leitura. Backfill horário de 7 dias via `past_days`.
+- Open-Meteo: crédito obrigatório "Weather data by Open-Meteo.com" (https://open-meteo.com) em README, docs/DADOS.md e rodapé do dashboard. A precipitação é de modelo/reanálise, não observação, e a API gratuita é só para uso não comercial.
+- Testes nunca acessam a internet (a API é simulada com mocks). `SENSOR_FONTE` padrão é `open-meteo`.
+- DAG `antecedengue_semanal`: a última tarefa (`exporta_csv_sensor`) gera o CSV; no compose, `docker compose --profile export run --rm export-sensor`.
 
