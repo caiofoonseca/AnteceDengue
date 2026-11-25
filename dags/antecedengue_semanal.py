@@ -1,8 +1,9 @@
-"""DAG semanal de inferência (segunda 06:00, America/Recife): agrega o sensor, prevê e registra o monitoramento.
+"""DAG semanal de inferência (segunda 06:00, America/Recife): agrega a estação simulada, prevê, registra o monitoramento
+e exporta o CSV semanal da estação (data/processed/sensor_semanal.csv).
 
 Idempotente: a agregação apaga e recalcula as semanas afetadas, a inferência substitui as previsões da
 mesma semana base no Postgres (e regrava o CSV) e o monitoramento cria um run novo no MLflow a cada execução.
-As leituras do sensor NÃO alimentam o modelo; a agregação serve ao dashboard.
+As leituras da estação simulada NÃO alimentam o modelo; a agregação e o CSV servem ao dashboard e à inferência recente.
 """
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -22,4 +23,7 @@ with DAG(
     monitoramento = BashOperator(task_id="registra_monitoramento", cwd=PROJECT_DIR,
                                  bash_command=py("-m src.monitoring"))
 
-    agrega_sensor >> inferencia >> monitoramento
+    exporta_csv = BashOperator(task_id="exporta_csv_sensor", cwd=PROJECT_DIR,
+                               bash_command=py("-m src.export_sensor_csv"))
+
+    agrega_sensor >> inferencia >> monitoramento >> exporta_csv

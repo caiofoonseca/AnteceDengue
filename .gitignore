@@ -252,3 +252,4 @@ secrets.h
 !data/processed/panel.csv
 !data/processed/clima_semanal.csv
 !data/processed/predictions_latest.csv
+!data/processed/sensor_semanal.csv

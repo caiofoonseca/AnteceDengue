@@ -8,7 +8,8 @@ ESPERADO = {
     "antecedengue_dados": {"ingestao": [], "preparacao_painel": ["ingestao"], "clima_semanal": ["preparacao_painel"],
                            "validacao_qualidade": ["clima_semanal"], "disponibiliza_processed": ["validacao_qualidade"]},
     "antecedengue_semanal": {"agrega_sensor": [], "inferencia_em_lote": ["agrega_sensor"],
-                             "registra_monitoramento": ["inferencia_em_lote"]},
+                             "registra_monitoramento": ["inferencia_em_lote"],
+                             "exporta_csv_sensor": ["registra_monitoramento"]},
     "antecedengue_treino": {"exp01_baseline": [], "exp02_comparacao": ["exp01_baseline"],
                             "exp03_otimizacao": ["exp02_comparacao"]},
 }

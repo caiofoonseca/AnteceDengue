@@ -1,0 +1,5 @@
+bairro,semana_inicio,temp_media,umid_media,chuva_mm_soma,n_leituras,fonte
+BOA VIAGEM,2026-11-15,28.61,64.51,1.4,96,api_open_meteo_via_mqtt
+BOA VIAGEM,2026-11-22,28.8,68.44,1.9,95,api_open_meteo_via_mqtt
+VARZEA,2026-11-15,28.56,63.95,1.1,96,api_open_meteo_via_mqtt
+VARZEA,2026-11-22,28.68,68.79,2.7,95,api_open_meteo_via_mqtt

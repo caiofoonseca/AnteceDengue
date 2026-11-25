@@ -159,7 +159,7 @@ services:
     environment:
       API_URL: http://api:8000
       API_PUBLIC_URL: http://localhost:${API_HOST_PORT:-8000}
-      SENSOR_FONTE: ${SENSOR_FONTE:-real}
+      SENSOR_FONTE: ${SENSOR_FONTE:-open-meteo}
       DASHBOARD_AUTH: ${DASHBOARD_AUTH:-on}
       DASHBOARD_USER: ${DASHBOARD_USER:-}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-}
@@ -179,11 +179,26 @@ services:
   sensor-sim:
     <<: *app
     profiles: ["demo"]
-    command: ["python", "scripts/sim_publisher.py", "--host", "mosquitto", "--backfill-dias", "21", "--intervalo", "10"]
+    command: ["python", "scripts/sim_publisher.py", "--host", "mosquitto", "--source", "api", "--backfill-dias", "7",
+              "--interval", "60"]
     depends_on:
       mosquitto:
         condition: service_healthy
       ingestor:
+        condition: service_healthy
+    networks: [dados]
+
+  export-sensor:
+    <<: *app
+    profiles: ["export"]
+    restart: "no"
+    command: ["python", "-m", "src.export_sensor_csv"]
+    environment:
+      DATABASE_URL: *db-url
+    volumes:
+      - ./data/processed:/app/data/processed
+    depends_on:
+      postgres:
         condition: service_healthy
     networks: [dados]
 
