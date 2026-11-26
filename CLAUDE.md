@@ -52,12 +52,12 @@
 - `python -m src.predict_batch` carrega o champion do MLflow Registry (ou `models/best_model.joblib` se o Registry estiver inacessível), confere a versão do scikit-learn contra `models/model_meta.json` e grava `data/processed/predictions_latest.csv`.
 - Limitação 1: a previsão é feita sobre a última semana presente nos dados (hoje PANEL_END = 2025-08-17), então prevê a semana seguinte a essa data, não a semana atual do calendário.
 - Limitação 2: os casos vêm de CSVs anuais do portal, que chegam com atraso; a previsão só se atualiza quando os CSVs forem atualizados.
-- Limitação 3: as leituras do sensor NÃO alimentam o modelo (só a demonstração ao vivo e o dashboard).
+- Limitação 3: as leituras do sensor NÃO alimentam o treino nem a previsão oficial (só a inferência ao vivo de demonstração e o dashboard).
 - `risk_score = 50*prob_medio + 100*prob_alto` é um índice de 0 a 100 para ordenar bairros; não é probabilidade.
 - As colunas de features da inferência são exatamente as de `model_meta.json`, na mesma ordem; se faltar alguma, a função falha com erro claro.
 
 ## Decisões do sensor (passo 10: ingestão MQTT)
-- As leituras do sensor NÃO alimentam o modelo; servem ao dashboard e à demonstração da infraestrutura.
+- As leituras do sensor NÃO alimentam o treino nem a previsão oficial; servem ao dashboard e à inferência ao vivo de demonstração (ver "Decisões da inferência ao vivo").
 - A semana das leituras é calculada no fuso America/Recife (domingo a sábado), embora o timestamp chegue em UTC. Uma leitura de sábado 23:30 em Recife (domingo 02:30 UTC) pertence à semana que termina nesse sábado.
 - A relação estação -> bairro vem de config/stations_bairros.json (station_id para bairro, nomes oficiais do painel); `src/stations.py` valida os bairros contra o painel. Estação sem bairro é ignorada na agregação, com aviso.
 - sensor_readings guarda horários em UTC sem fuso; (station_id, ts) é único, então reenvios do QoS 1 são idempotentes (a primeira gravação prevalece). Leitura inválida é gravada com is_valid = false e invalid_reason; sem timestamp reconhecível (ts nulo) ela não entra na deduplicação.
@@ -145,3 +145,8 @@ src/ (config.py, dados, features, rótulos, validação, modelos, treino, predi�
 - Experimento MLflow `05-projecao-sazonal` (o 04 já era o monitoramento semanal). Saídas versionadas (exceção no .gitignore): `data/processed/projecao_2026_mensal.csv` e `projecao_2026_meta.json`; relatório em `reports/projecao_sazonal.md`.
 - Passo 0 (25/11/2026): portal sem dados novos além de ago/2025 (tamanhos idênticos); 2013 e 2014 continuam fora. Painel inalterado, métricas do modelo semanal NÃO recalculadas.
 - Limitações: anos epidêmicos mudam a magnitude; sem clima futuro; ago a dez/2025 não entram (cauda), então há um degrau entre jul e ago na curva de 2026; confiança = consistência da classe entre anos, não intervalo estatístico.
+
+## Decisões da inferência ao vivo (requisito 7 de ML)
+- O professor pede o modelo integrado ao pipeline consumindo dados novos do simulador. `src/predict_live.py` (`python -m src.predict_live`): série semanal do município de `sensor_weekly` (só semanas completas domingo a sábado em Recife; temperatura e umidade ponderadas por leituras; chuva = média entre bairros da soma semanal; semana sem leitura vira nula) -> `features.climate_features` -> sobrescreve só as colunas de clima das features de `predict_batch.latest_features` (casos continuam os da última semana do painel real) -> champion -> `predictions_live.csv` e tabela `predictions_live` (só a execução mais recente).
+- É DEMONSTRAÇÃO do pipeline: escala de clima diferente do treino (ERA5/InfoDengue x Open-Meteo em ponto) e semana base dos casos (PANEL_END) defasada do clima. Treino, teste, limiares e métricas não mudam; a previsão oficial segue sendo `predict_batch`. API `/predictions/live` (campo `aviso` fixo, 503 sem execução); aba Sensor do dashboard mostra a seção com o aviso; DAG `antecedengue_semanal`, tarefa `inferencia_ao_vivo` depois de `agrega_sensor`.
+- O compose carrega 80 dias de histórico horário (`--backfill-dias 80`, máximo da API 92) para existirem os lags de até 8 semanas. Rastreabilidade dos requisitos: `docs/REQUISITOS_ML.md`.

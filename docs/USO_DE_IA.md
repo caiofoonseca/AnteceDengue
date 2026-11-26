@@ -88,3 +88,7 @@ O Claude Code trocou a fonte do publicador MQTT do ESP32 para a API Open-Meteo (
 ### 25/11/2026: projeção sazonal 2026
 
 O Claude Code implementou a projeção sazonal mensal (`src/projecao.py`, endpoint `/projecao/2026`, aba "Projeção 2026" do dashboard, figuras e testes) e rodou os backtests A e B.
+
+### 26/11/2026: inferência ao vivo e rastreabilidade dos requisitos de ML
+
+O Claude Code implementou `src/predict_live.py` (clima da estação simulada + casos do painel real), a tabela `predictions_live`, o endpoint `/predictions/live`, a seção de demonstração na aba Sensor, a tarefa `inferencia_ao_vivo` no DAG semanal, o aumento do histórico do publicador para 80 dias, o documento `docs/REQUISITOS_ML.md` e os testes correspondentes.
