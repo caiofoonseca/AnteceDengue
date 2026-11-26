@@ -9,7 +9,8 @@ ESPERADO = {
                            "validacao_qualidade": ["clima_semanal"], "disponibiliza_processed": ["validacao_qualidade"]},
     "antecedengue_semanal": {"agrega_sensor": [], "inferencia_em_lote": ["agrega_sensor"],
                              "registra_monitoramento": ["inferencia_em_lote"],
-                             "exporta_csv_sensor": ["registra_monitoramento"]},
+                             "inferencia_ao_vivo": ["agrega_sensor"],
+                             "exporta_csv_sensor": ["registra_monitoramento", "inferencia_ao_vivo"]},
     "antecedengue_treino": {"exp01_baseline": [], "exp02_comparacao": ["exp01_baseline"],
                             "exp03_otimizacao": ["exp02_comparacao"]},
 }

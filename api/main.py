@@ -16,9 +16,9 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.model_store import LoadedModel, ModelLoadError, load_champion
-from api.repository import (PanelUnavailable, PredictionsUnavailable, ProjectionUnavailable, Repository,
+from api.repository import (LiveUnavailable, PanelUnavailable, PredictionsUnavailable, ProjectionUnavailable, Repository,
                             SensorDbUnavailable)
-from api.schemas import (BairroDetail, BairrosResponse, HealthResponse, ModelInfo, PredictionItem,
+from api.schemas import (BairroDetail, LiveItem, LiveResponse, BairrosResponse, HealthResponse, ModelInfo, PredictionItem,
                          PredictionsResponse, PredictRequest, PredictResponse, PredictRow, ProjecaoItem,
                          ProjecaoResponse, SensorSemana,
                          SensorWeeklyResponse)
@@ -110,6 +110,26 @@ def create_app(loaded: LoadedModel | None = None, repository: Repository | None 
         return PredictionsResponse(week_start=itens[0].week_start if itens else None,
                                    target_week=itens[0].target_week if itens else None, total=len(itens),
                                    classe=classe, top=top, predictions=itens, fonte=r.predictions_source)
+
+    @app.get("/predictions/live", response_model=LiveResponse, tags=["Previsões"],
+             summary="Inferência ao vivo (demonstração) com o clima da estação simulada",
+             description="O champion recebe as features de casos da última semana do painel real e as features de clima "
+                         "calculadas das leituras da estação simulada (Open-Meteo via MQTT). Escalas de clima diferentes das "
+                         "do treino e semana base de casos defasada: é demonstração do pipeline, não previsão operacional. "
+                         "`risk_score` é índice de ordenação, não calibrado. A previsão oficial é `/predictions/latest`.",
+             responses={503: {"description": "Sem inferência ao vivo gravada (rode python -m src.predict_live)."}})
+    def predictions_live(request: Request, top: int | None = Query(None, ge=1, description="Só os N de maior risco.")):
+        try:
+            df = repo(request).live_predictions()
+        except LiveUnavailable as erro:
+            raise HTTPException(503, str(erro))
+        df = df.sort_values("rank")
+        if top is not None:
+            df = df.head(top)
+        itens = [LiveItem(**linha) for linha in df.to_dict("records")]
+        return LiveResponse(week_start=itens[0].week_start if itens else None,
+                            target_week=itens[0].target_week if itens else None,
+                            semana_clima=itens[0].semana_clima if itens else None, total=len(itens), predictions=itens)
 
     @app.get("/bairros", response_model=BairrosResponse, tags=["Bairros"], summary="Lista de bairros")
     def bairros(request: Request):

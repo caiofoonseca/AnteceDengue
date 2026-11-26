@@ -66,6 +66,25 @@ predictions = Table(
 PREDICTION_COLUMNS = ("bairro", "week_start", "target_week", "classe_prevista", "rotulo_previsto", "prob_baixo",
                       "prob_medio", "prob_alto", "risk_score", "rank")
 
+predictions_live = Table(
+    "predictions_live", metadata,
+    Column("bairro", String(100), primary_key=True),
+    Column("week_start", Date, primary_key=True),
+    Column("target_week", Date, nullable=False),
+    Column("classe_prevista", Integer, nullable=False),
+    Column("rotulo_previsto", String(10), nullable=False),
+    Column("prob_baixo", Float, nullable=False),
+    Column("prob_medio", Float, nullable=False),
+    Column("prob_alto", Float, nullable=False),
+    Column("risk_score", Float, nullable=False),
+    Column("rank", Integer, nullable=False),
+    Column("semana_clima", Date, nullable=False),
+    Column("n_semanas_clima", Integer, nullable=False),
+    Column("generated_at", DateTime, nullable=False),
+)
+
+LIVE_COLUMNS = PREDICTION_COLUMNS + ("semana_clima", "n_semanas_clima")
+
 READING_COLUMNS = ("station_id", "ts", "latitude", "longitude", "temperature_c", "relative_humidity",
                    "rainfall_mm", "battery_voltage", "is_valid", "invalid_reason", "raw_payload")
 
@@ -138,3 +157,30 @@ def load_latest_predictions(engine: Engine) -> pd.DataFrame:
         linhas = conn.execute(select(*[predictions.c[c] for c in PREDICTION_COLUMNS]).where(
             predictions.c.week_start == ultima).order_by(predictions.c["rank"])).mappings().all()
     return pd.DataFrame([dict(l) for l in linhas], columns=list(PREDICTION_COLUMNS))
+
+
+def save_live_predictions(engine: Engine, frame: pd.DataFrame, generated_at: dt.datetime | None = None) -> int:
+    """Grava a inferência ao vivo; a tabela guarda só a execução mais recente (reexecutar substitui tudo)."""
+    agora = generated_at or utcnow()
+    registros = []
+    for linha in frame[list(LIVE_COLUMNS)].to_dict("records"):
+        for coluna in ("week_start", "target_week", "semana_clima"):
+            linha[coluna] = pd.Timestamp(linha[coluna]).date()
+        for coluna in ("classe_prevista", "rank", "n_semanas_clima"):
+            linha[coluna] = int(linha[coluna])
+        for coluna in ("prob_baixo", "prob_medio", "prob_alto", "risk_score"):
+            linha[coluna] = float(linha[coluna])
+        registros.append({**linha, "generated_at": agora})
+    with engine.begin() as conn:
+        conn.execute(delete(predictions_live))
+        if registros:
+            conn.execute(insert(predictions_live), registros)
+    return len(registros)
+
+
+def load_live_predictions(engine: Engine) -> pd.DataFrame:
+    """Última inferência ao vivo gravada, ordenada por rank (vazio se não houver)."""
+    with engine.connect() as conn:
+        linhas = conn.execute(select(*[predictions_live.c[c] for c in LIVE_COLUMNS]).order_by(
+            predictions_live.c["rank"])).mappings().all()
+    return pd.DataFrame([dict(l) for l in linhas], columns=list(LIVE_COLUMNS))

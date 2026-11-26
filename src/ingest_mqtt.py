@@ -2,7 +2,7 @@
 
 parse_payload é uma função pura: nunca levanta exceção; leitura inválida vira um registro com
 is_valid=False e o motivo em invalid_reason. Payload que não é JSON vai como texto em raw_payload.
-As leituras do sensor NÃO alimentam o modelo (só dashboard e demonstração).
+As leituras NÃO entram no treino nem na previsão oficial (só dashboard e inferência ao vivo de demonstração).
 """
 import argparse
 import datetime as dt

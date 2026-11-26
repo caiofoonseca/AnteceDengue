@@ -14,7 +14,7 @@ from sqlalchemy.engine import Engine
 
 from src import config
 from src.bairros import normalize_name
-from src.db import init_db, load_latest_predictions, normalize_database_url, sensor_weekly
+from src.db import init_db, load_latest_predictions, load_live_predictions, normalize_database_url, sensor_weekly
 
 log = logging.getLogger("api.repository")
 
@@ -32,6 +32,10 @@ class SensorDbUnavailable(RuntimeError):
 
 
 class ProjectionUnavailable(RuntimeError):
+    pass
+
+
+class LiveUnavailable(RuntimeError):
     pass
 
 
@@ -95,6 +99,19 @@ class Repository:
         return self._read_csv(self.predictions_path, "predictions", PredictionsUnavailable,
                               f"Arquivo de previsões {self.predictions_path.name} não encontrado. "
                               "Gere-o com: python -m src.predict_batch")
+
+    def live_predictions(self) -> pd.DataFrame:
+        """Última inferência ao vivo (demonstração) gravada no Postgres pelo DAG semanal."""
+        try:
+            if not self._tables_ready:
+                init_db(self.engine)
+                self._tables_ready = True
+            df = load_live_predictions(self.engine)
+        except Exception as erro:
+            raise LiveUnavailable(f"Banco indisponível para a inferência ao vivo ({type(erro).__name__}).") from erro
+        if df.empty:
+            raise LiveUnavailable("Ainda não há inferência ao vivo: rode python -m src.predict_live (ou o DAG semanal).")
+        return df
 
     def predictions_available(self) -> bool:
         return self.predictions_path.exists() or self._predictions_from_db() is not None

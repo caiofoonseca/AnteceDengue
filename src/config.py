@@ -53,6 +53,7 @@ STATIONS_PATH = ROOT / "config" / "stations_bairros.json"
 SENSOR_TIMEZONE = "America/Recife"
 PANEL_PATH = DATA_PROCESSED / "panel.csv"
 PREDICTIONS_PATH = DATA_PROCESSED / "predictions_latest.csv"
+LIVE_PREDICTIONS_PATH = DATA_PROCESSED / "predictions_live.csv"
 PROJECTION_PATH = DATA_PROCESSED / "projecao_2026_mensal.csv"
 PROJECTION_META_PATH = DATA_PROCESSED / "projecao_2026_meta.json"
 API_CORS_ORIGINS = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "http://localhost:8501,http://127.0.0.1:8501").split(",") if o.strip()]

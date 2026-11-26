@@ -58,6 +58,9 @@ class ApiClient:
         params = {k: v for k, v in (("top", top), ("classe", classe)) if v is not None}
         return self.get("/predictions/latest", params)
 
+    def predictions_live(self, top: int | None = None) -> dict:
+        return self.get("/predictions/live", {"top": top} if top is not None else None)
+
     def bairros(self) -> dict:
         return self.get("/bairros")
 

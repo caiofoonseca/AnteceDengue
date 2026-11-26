@@ -179,7 +179,7 @@ services:
   sensor-sim:
     <<: *app
     profiles: ["demo"]
-    command: ["python", "scripts/sim_publisher.py", "--host", "mosquitto", "--source", "api", "--backfill-dias", "7",
+    command: ["python", "scripts/sim_publisher.py", "--host", "mosquitto", "--source", "api", "--backfill-dias", "80",
               "--interval", "60"]
     depends_on:
       mosquitto:

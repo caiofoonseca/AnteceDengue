@@ -82,7 +82,13 @@ class FakeResponse:
         return self._corpo
 
 
-def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=False, projecao=True):
+def live_payload():
+    itens = [dict(p, semana_clima="2026-11-15", n_semanas_clima=10) for p in prediction_payload()["predictions"]]
+    return {"aviso": "DEMONSTRAÇÃO: teste.", "week_start": "2025-08-17", "target_week": "2025-08-24",
+            "semana_clima": "2026-11-15", "total": len(itens), "predictions": itens}
+
+
+def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=False, projecao=True, ao_vivo=True):
     chamadas = []
 
     def falso_get(url, params=None, timeout=None):
@@ -112,6 +118,10 @@ def instalar_api(monkeypatch, sensor=SENSOR_ITEMS, predicoes=True, fora_do_ar=Fa
             if not projecao:
                 return FakeResponse(503, {"detail": "Projeção não encontrada."})
             return FakeResponse(200, projection_payload())
+        if caminho == "/predictions/live":
+            if not ao_vivo:
+                return FakeResponse(503, {"detail": "Ainda não há inferência ao vivo."})
+            return FakeResponse(200, live_payload())
         if caminho == "/sensor/weekly":
             return FakeResponse(200, {"total": len(sensor), "items": sensor, "nota": "x"})
         return FakeResponse(404, {"detail": "?"})
@@ -545,3 +555,17 @@ def test_funcoes_da_projecao():
     assert "errou" in tabela.iloc[-1]["método escolhido"] and tabela.iloc[-1]["baseline (mesmo mês do último ano)"] == "acertou"
     assert data.projection_frame({}).empty
 
+
+def test_aba_sensor_mostra_demonstracao_ao_vivo_com_aviso(monkeypatch):
+    instalar_api(monkeypatch)
+    at = rodar()
+    assert not at.exception
+    assert any("DEMONSTRAÇÃO" in w.value for w in at.warning)
+    assert any("demonstração" in s.value.lower() for s in at.subheader)
+
+
+def test_aba_sensor_sem_inferencia_ao_vivo_explica(monkeypatch):
+    instalar_api(monkeypatch, ao_vivo=False)
+    at = rodar()
+    assert not at.exception
+    assert any("Ainda não há inferência ao vivo" in i.value for i in at.info)

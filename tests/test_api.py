@@ -253,7 +253,7 @@ def test_aviso_de_versao_diferente_do_sklearn(ambiente, tmp_path, caplog):
 def test_openapi_lista_endpoints_e_descreve_risk_score(client):
     esquema = client.get("/openapi.json").json()
     assert set(esquema["paths"]) == {"/health", "/model", "/predictions/latest", "/bairros", "/bairros/{bairro}",
-                                     "/predict", "/sensor/weekly", "/projecao/2026"}
+                                     "/predict", "/sensor/weekly", "/projecao/2026", "/predictions/live"}
     campos = esquema["components"]["schemas"]["PredictionItem"]["properties"]
     assert "NÃO é uma probabilidade" in campos["risk_score"]["description"]
     assert "calibrado" in campos["risk_score"]["description"]
@@ -265,3 +265,24 @@ def test_url_postgres_usa_psycopg2():
 
     assert normalize_database_url("postgresql://u:p@h:5432/d") == "postgresql+psycopg2://u:p@h:5432/d"
     assert normalize_database_url("sqlite:///x.db") == "sqlite:///x.db"
+
+
+def test_predictions_live_503_sem_execucao(client):
+    r = client.get("/predictions/live")
+    assert r.status_code == 503 and "predict_live" in r.json()["detail"]
+
+
+def test_predictions_live_devolve_aviso_e_colunas_do_clima(ambiente):
+    from src.db import save_live_predictions
+
+    base, loaded, _ = ambiente
+    repo = make_repo(base)
+    pred = pd.read_csv(base / "pred.csv", parse_dates=["week_start", "target_week"])
+    pred["semana_clima"] = pd.Timestamp("2026-11-15")
+    pred["n_semanas_clima"] = 10
+    save_live_predictions(repo.engine, pred)
+    with TestClient(create_app(loaded, repo)) as c:
+        corpo = c.get("/predictions/live").json()
+        top1 = c.get("/predictions/live", params={"top": 1}).json()
+    assert corpo["aviso"].startswith("DEMONSTRAÇÃO") and corpo["semana_clima"] == "2026-11-15"
+    assert corpo["total"] == 3 and corpo["predictions"][0]["n_semanas_clima"] == 10 and top1["total"] == 1

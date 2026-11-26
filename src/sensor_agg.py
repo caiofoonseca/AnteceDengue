@@ -4,7 +4,7 @@ A semana é calculada no fuso America/Recife (domingo a sábado), embora o times
 Por (bairro, semana): temperatura média, umidade média, chuva total (soma de rainfall_mm), número de
 leituras e menor tensão de bateria. Idempotente: as semanas afetadas são apagadas e recalculadas.
 Estações sem bairro em config/stations_bairros.json são ignoradas com aviso.
-As leituras do sensor NÃO alimentam o modelo.
+As leituras NÃO entram no treino nem na previsão oficial; alimentam a inferência ao vivo de demonstração.
 """
 import argparse
 import logging

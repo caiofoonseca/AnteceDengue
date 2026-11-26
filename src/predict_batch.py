@@ -5,7 +5,7 @@ usa models/best_model.joblib. As features vêm da ÚLTIMA semana presente no pai
 as colunas usadas são exatamente as de models/model_meta.json, na mesma ordem.
 
 Limitações de uso: a previsão cobre a semana seguinte à última semana dos dados; os casos vêm de CSVs
-anuais do portal, que chegam com atraso; as leituras do sensor NÃO alimentam o modelo.
+anuais do portal, que chegam com atraso; as leituras do sensor não entram aqui (ver src/predict_live.py, demonstração).
 
 risk_score = 50 * prob_medio + 100 * prob_alto é um índice de 0 a 100 para ordenar bairros.
 NÃO é uma probabilidade (nem uma taxa de casos): só faz sentido comparar bairros entre si.

@@ -66,6 +66,24 @@ class PredictionsResponse(BaseModel):
     fonte: str | None = Field(None, description="De onde vieram as previsões: postgres (DAG semanal) ou csv (fallback).")
 
 
+LIVE_WARNING = ("DEMONSTRAÇÃO: casos do painel real (semana base antiga) combinados com o clima da estação simulada "
+                "(Open-Meteo). O modelo não foi treinado nem avaliado com esses dados; não é previsão operacional.")
+
+
+class LiveItem(PredictionItem):
+    semana_clima: dt.date = Field(description="Última semana completa de clima da estação usada nas features.")
+    n_semanas_clima: int = Field(description="Semanas completas de clima disponíveis (lags até 8 semanas pedem 9).")
+
+
+class LiveResponse(BaseModel):
+    aviso: str = LIVE_WARNING
+    week_start: dt.date | None
+    target_week: dt.date | None
+    semana_clima: dt.date | None
+    total: int
+    predictions: list[LiveItem]
+
+
 class BairrosResponse(BaseModel):
     total: int
     bairros: list[str]

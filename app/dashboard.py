@@ -316,12 +316,32 @@ def sensor_chart(recorte: pd.DataFrame, coluna: str, titulo: str, barras: bool =
     return ui.style_figure(figura, height=320, titulo=titulo)
 
 
+def live_section() -> None:
+    """Demonstração: previsão do modelo com o clima da estação simulada (GET /predictions/live)."""
+    st.subheader("Demonstração: modelo com o clima da estação simulada")
+    try:
+        corpo = get("/predictions/live")
+    except ApiError as erro:
+        st.info(f"Ainda não há inferência ao vivo: {erro.detail}")
+        return
+    st.warning(corpo["aviso"], icon="🧪")
+    st.caption(f"Semana base dos casos: {data.format_date(corpo['week_start'])}; clima da estação até a semana de "
+               f"{data.format_date(corpo['semana_clima'])}. Índice de risco de 0 a 100, não calibrado; a previsão "
+               "oficial está nas abas Mapa de risco e Ranking.")
+    quadro = pd.DataFrame(corpo["predictions"]).head(10)
+    mostrar = quadro[["rank", "bairro", "rotulo_previsto", "risk_score"]].rename(columns={
+        "rank": "posição", "rotulo_previsto": "classe", "risk_score": "índice de risco"})
+    with st.container(border=True, key="card_sensor_live"):
+        ui.render(ui.card_title("Dez maiores índices com o clima da estação", "demonstração do pipeline"))
+        st.dataframe(mostrar, hide_index=True, width="stretch")
+
+
 def tab_sensor() -> None:
     st.subheader("Estação simulada: leituras da API Open-Meteo")
     st.info("Não há sensor físico. Uma estação simulada consulta a API pública Open-Meteo (temperatura, umidade e "
             "precipitação, dados de modelo e reanálise, não medições) e publica as leituras via MQTT; elas são gravadas "
-            "no banco e agregadas por semana. **Elas não alimentam o modelo de risco**: o modelo usa só casos e clima "
-            "de reanálise. [Weather data by Open-Meteo.com](https://open-meteo.com/) (uso não comercial).", icon="📡")
+            "no banco e agregadas por semana. **Elas não alimentam o modelo de risco** no treino nem na previsão oficial "
+            "(casos e clima de reanálise); a seção final mostra uma demonstração do modelo consumindo-as. [Weather data by Open-Meteo.com](https://open-meteo.com/) (uso não comercial).", icon="📡")
     fonte = os.getenv("SENSOR_FONTE", "open-meteo")
     if data.sensor_is_test(fonte):
         st.warning(f"As leituras mostradas vêm de dados **{fonte}** (sintéticos, sorteados, sem relação com o tempo "
@@ -358,6 +378,7 @@ def tab_sensor() -> None:
             show_chart(sensor_chart(recorte, "umidade (%)", "Umidade relativa média semanal (%)"))
     with st.container(border=True, key="card_sensor_chuva"):
         show_chart(sensor_chart(recorte, "chuva (mm)", "Chuva total semanal (mm)", barras=True))
+    live_section()
 
 
 def comparison_chart(info: dict):
